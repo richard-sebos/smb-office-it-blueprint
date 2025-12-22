@@ -1,6 +1,6 @@
 # 🏢 Samba AD Lab Series — Simulated Business IT Infrastructure
 
-**Author:** Richard Richard  
+**Author:** Richard Chamberlain  
 **Version:** 1.0  
 **Project Status:** Planning & Implementation Phase  
 **Last Updated:** December 2025
