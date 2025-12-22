@@ -1,0 +1,30 @@
+t-crypt encryption policy
+# Encrypt all content in sensitive directories
+# =========================================================
+
+# Encrypted directories
+articles/** filter=git-crypt diff=git-crypt
+assets/** filter=git-crypt diff=git-crypt
+implementation/** filter=git-crypt diff=git-crypt
+
+# =========================================================
+# 👁️ Leave these unencrypted (plaintext for business users)
+# =========================================================
+
+# Business-facing project requirements
+simulated-client-project/** !filter !diff
+
+# Diagrams, topology maps, spreadsheets, etc.
+topology/** !filter !diff
+
+# Documentation files (readable to all)
+*.md !filter !diff
+*.txt !filter !diff
+
+# Images and assets you want visible in unencrypted folders
+*.png !filter !diff
+*.jpg !filter !diff
+*.jpeg !filter !diff
+*.svg !filter !diff
+*.pdf !filter !diff
+
