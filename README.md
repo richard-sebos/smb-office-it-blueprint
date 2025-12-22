@@ -1,10 +1,3 @@
-Absolutely! Below is a polished `README.md` designed specifically for **your GitHub repo** — targeting **casual IT professionals** *and* **non-technical business clients**. It strikes a professional but friendly tone, explaining the project's purpose, business alignment, and why parts of the repository are encrypted.
-
-This version is ideal for public repositories or client-facing documentation where you're offering **a taste of the project**, while protecting sensitive, value-added content.
-
----
-
-````markdown
 # 🏢 Samba AD Lab Series — Simulated Business IT Infrastructure
 
 **Author:** Richard Chamberlain  
@@ -137,15 +130,6 @@ For licensing inquiries or consulting arrangements, please contact:
 
 > *“This lab isn’t just about Linux — it’s about showing how thoughtful, secure, and scalable IT systems are built to match real business needs.”*
 
-```
 
----
 
-### 🔧 Next Optional Enhancements:
-Would you like me to:
-- Create the **`LICENSE.md`** for the public vs encrypted portions?
-- Add **"Access Instructions"** for decrypting folders under NDA or license?
-- Generate a **banner image** for the GitHub repo that reinforces the lab's SMB/business focus?
 
-Let me know how far you'd like to take this!
-```
