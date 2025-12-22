@@ -115,7 +115,7 @@ Interested in:
 * Adapting this for your organization?
 * Using the blueprint for client projects or training?
 
-Feel free to reach out via [LinkedIn](https://linkedin.com/in/your-profile) or contact me directly.
+Feel free to reach out via [LinkedIn](www.linkedin.com/in/richard-chamberlain-b9945a32) or contact me directly.
 
 ---
 
@@ -124,7 +124,7 @@ Feel free to reach out via [LinkedIn](https://linkedin.com/in/your-profile) or c
 Portions of this repository are open for educational and exploratory use. Encrypted and proprietary materials are protected and may only be shared under specific licensing or project terms.
 
 For licensing inquiries or consulting arrangements, please contact:
-📧 [richard@example.com](mailto:richard@example.com)
+📧 [info@sebostechnology.com](mailto:info@sebostechnology.com)
 
 ---
 
