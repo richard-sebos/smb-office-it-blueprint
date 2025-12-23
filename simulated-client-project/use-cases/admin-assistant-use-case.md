@@ -143,7 +143,7 @@ This role supports daily operational tasks such as scheduling, document formatti
 ## 5. Related Files
 
 - [shared-services-policy.md](../policy/shared-services-policy.md)
-- [access-control-matrix.md](../../implementation/security/access-control-matrix.md)
+- [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
 - [template-folder-structure.md](../../assets/templates/template-folder-structure.md)
 
 ---
