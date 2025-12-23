@@ -80,3 +80,109 @@ Located in: `/etc/audit/rules.d/finance.rules`
 -w /srv/shares/finance/payroll      -p rwa -k finance_payroll
 -w /srv/shares/finance/budgets      -p rwa -k finance_budgets
 -w /srv/shares/finance/exports      -p rwa -k finance_exports
+````
+
+| Key Name           | Description                       |
+| ------------------ | --------------------------------- |
+| `finance_invoices` | Track invoice reads/writes        |
+| `finance_payroll`  | Monitor payroll report access     |
+| `finance_budgets`  | Watch budget docs for changes     |
+| `finance_exports`  | Watch for sensitive Excel exports |
+
+---
+
+## 5. Executable Monitoring
+
+```bash
+# Monitor Data Transfer Utilities
+-a always,exit -F path=/usr/bin/scp -F perm=x -F auid>=1000 -F auid!=unset -k finance_tools
+-a always,exit -F path=/usr/bin/rsync -F perm=x -F auid>=1000 -F auid!=unset -k finance_tools
+-a always,exit -F path=/bin/cp    -F perm=x -F auid>=1000 -F auid!=unset -k finance_tools
+```
+
+These rules:
+
+* Track use of copy/transfer tools by domain users
+* Ignore system/background (UID < 1000) tasks
+
+---
+
+## 6. User-Level Audit Rules
+
+### Finance Manager Login Tracking
+
+```bash
+# Track login events for finance manager
+-a always,exit -F arch=b64 -S execve -F uid=10010 -k finance_login
+```
+
+> Replace `10010` with the actual UID of the Finance Manager (e.g., from `id finance.mgr`)
+
+You may also configure PAM module tracking with:
+
+```bash
+session required pam_tty_audit.so enable=always
+```
+
+---
+
+## 7. Log Retention & Rotation
+
+* Audit logs: `/var/log/audit/audit.log`
+* Rotated via: `logrotate.d/audit`
+* Retention: 90 days (disk) + offloaded to `log01` weekly
+* Format: RAW and JSON (simulated for Splunk-style search)
+
+---
+
+## 8. Alerting & Incident Escalation
+
+Alerts are triggered on:
+
+* Access to payroll folder by unauthorized group
+* Use of `scp` by non-technical roles
+* After-hours file access (simulated time window: 20:00–06:00)
+
+Escalation:
+
+1. Alert generated (Email/Syslog)
+2. Reviewed by **IT Security Analyst**
+3. Escalated to **Finance Manager** and **Managing Partner** (if needed)
+
+---
+
+## 9. Related Files
+
+* [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md)
+* [finance-department-policy.md](../../simulated-client-project/policy/finance-department-policy.md)
+* [auditd-general-config.md](./auditd-general-config.md)
+* [git-crypt-encryption-policy.md](../encryption/git-crypt-encryption-policy.md)
+
+---
+
+## 10. Review History
+
+| Version | Date       | Reviewer            | Notes         |
+| ------- | ---------- | ------------------- | ------------- |
+| v1.0    | 2025-12-23 | IT Security Analyst | Initial Draft |
+
+---
+
+## 11. Departmental Approval Checklist
+
+| Department / Agent    | Reviewed | Reviewer Notes |
+| --------------------- | -------- | -------------- |
+| SMB Analyst           | [ ]      |                |
+| IT Business Analyst   | [ ]      |                |
+| Project Doc Auditor   | [ ]      |                |
+| IT Security Analyst   | [ ]      |                |
+| IT AD Architect       | [ ]      |                |
+| Linux Admin/Architect | [ ]      |                |
+| Ansible Programmer    | [ ]      |                |
+| IT Code Auditor       | [ ]      |                |
+| SEO Analyst           | [ ]      |                |
+| Content Editor        | [ ]      |                |
+| Project Manager       | [ ]      |                |
+| Task Assistant        | [ ]      |                |
+
+
