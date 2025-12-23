@@ -110,3 +110,71 @@ Each Samba share uses:
 Standardized file naming improves search, auditability, and automation.
 
 **Pattern:**
+```
+
+[yyyy-mm-dd]*[Dept/Client]*[Type]_[v#].ext
+
+```
+
+**Example:**
+```
+
+2025-12-15_Finance_BudgetDraft_v2.xlsx
+2025-11-20_ClientA_Report_v1.pdf
+
+```
+
+---
+
+## 7. Auditing and Access Logs
+
+- **Auditd** is enabled on `files01` for all share directories.
+- Logs are shipped to `log01` weekly.
+- Use `ausearch` and `auditctl` to view or define rules.
+- Access reports reviewed quarterly by **IT Security Analyst**.
+
+---
+
+## 8. Encryption & Backup
+
+- **Sensitive shares** (HR, Finance, Executive) are backed up using **ZFS snapshots**.
+- External backups are encrypted using **restic + s3 backend** (simulated).
+- Intern share is excluded from encrypted offsite backups.
+- Git-tracked files in `assets/` and `implementation/` are encrypted via `git-crypt`.
+
+---
+
+## 9. Related Documents
+
+- [access-control-matrix.md](./access-control-matrix.md)
+- [finance-department-policy.md](../policy/finance-department-policy.md)
+- [shared-services-policy.md](../policy/shared-services-policy.md)
+- [executive-security-policy.md](../policy/executive-security-policy.md)
+- [git-crypt-encryption-policy.md](../../implementation/security/git-crypt-encryption-policy.md)
+
+---
+
+## 10. Review History
+
+| Version | Date       | Reviewer            | Notes            |
+|---------|------------|---------------------|------------------|
+| v1.0    | 2025-12-23 | IT AD Architect     | Initial Draft    |
+
+---
+
+## 11. Departmental Approval Checklist
+
+| Department / Agent        | Reviewed | Reviewer Notes |
+|---------------------------|----------|----------------|
+| SMB Analyst               | [ ]      |                |
+| IT Business Analyst       | [ ]      |                |
+| Project Doc Auditor       | [ ]      |                |
+| IT Security Analyst       | [ ]      |                |
+| IT AD Architect           | [ ]      |                |
+| Linux Admin/Architect     | [ ]      |                |
+| Ansible Programmer        | [ ]      |                |
+| IT Code Auditor           | [ ]      |                |
+| SEO Analyst               | [ ]      |                |
+| Content Editor            | [ ]      |                |
+| Project Manager           | [ ]      |                |
+| Task Assistant            | [ ]      |                |
