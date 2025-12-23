@@ -153,7 +153,7 @@ This use case informs:
 ## 5. Related Files
 
 - [finance-department-policy.md](../policy/finance-department-policy.md)
-- [file-share-permissions.md](../../implementation/fileserver/file-share-permissions.md)
+- [file-share-permissions.md](../security/file-share-permissions.md)
 - [auditd-finance-rules.md](../../implementation/security/auditd-finance-rules.md)
 
 ---
