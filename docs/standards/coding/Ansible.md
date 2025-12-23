@@ -1,16 +1,4 @@
-Certainly! Below is a **project-branded Ansible Best Practices Standards document** that aligns with your existing documentation framework.
-
-This guide is structured for **internal IT engineers and automation contributors**, and follows the same **header metadata**, **approval**, and **ownership** model as your standard Markdown documentation.
-
----
-
-### 📄 File Suggestion:
-
-`docs/style/ansible-best-practices.md`
-
----
-
-````markdown
+C
 <!--
 ███████████████████████████████████████████████████████████████
   🧾 SMB Office IT Blueprint – Project Document
@@ -221,18 +209,4 @@ ansible-lint playbooks/domain.yml
 | Project Manager       | [ ]      |                |
 | Task Assistant        | [ ]      |                |
 
-```
-
----
-
-### ✅ Ready for Action
-
-Would you like me to generate this as a `.md` file for you now?
-
-Also, I can provide:
-- A base `.ansible-lint` configuration file  
-- A folder skeleton with sample `README.md` files per role  
-- A vault-ready secrets example with `.gitattributes` protection  
-
-Let me know how deeply you'd like to automate or standardize the Ansible stack.
-```
+``
