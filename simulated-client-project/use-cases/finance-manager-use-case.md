@@ -154,7 +154,7 @@ This use case informs:
 
 - [finance-department-policy.md](../policy/finance-department-policy.md)
 - [file-share-permissions.md](../security/file-share-permissions.md)
-- [auditd-finance-rules.md](../../implementation/security/auditd-finance-rules.md)
+- [auditd-finance-rules.md](../audit/auditd-finance-rules.md)
 
 ---
 
