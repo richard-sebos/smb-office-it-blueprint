@@ -119,16 +119,13 @@ samba-tool ntacl get /srv/shares/finance
 
 Compare actual ACLs with:
 
-* [file-share-permissions.md](../security/file-share-permissions.md)
+* [file-share-permissions.md](../file-share-permissions.md)
 * [access-control-matrix.md](../access-control-matrix.md)
 
-### Step 5: Document All Findings
-
-Use [Findings Template](#7-findings-template)
 
 ---
 
-## 7. Findings Template
+## 6. Findings Template
 
 | Path                  | Issue                          | Severity | Fix Required | Notes                |
 | --------------------- | ------------------------------ | -------- | ------------ | -------------------- |
@@ -138,7 +135,7 @@ Use [Findings Template](#7-findings-template)
 
 ---
 
-## 8. Corrective Action
+## 7. Corrective Action
 
 * Adjust ACLs using `setfacl`
 * If using Ansible: update ACL tasks in corresponding playbook
@@ -147,7 +144,7 @@ Use [Findings Template](#7-findings-template)
 
 ---
 
-## 9. Related Documents
+## 8. Related Documents
 
 * [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
 * [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md)
@@ -156,7 +153,7 @@ Use [Findings Template](#7-findings-template)
 
 ---
 
-## 10. Review History
+## 9. Review History
 
 | Version | Date       | Reviewer            | Notes           |
 | ------- | ---------- | ------------------- | --------------- |
@@ -164,7 +161,7 @@ Use [Findings Template](#7-findings-template)
 
 ---
 
-## 11. Departmental Approval Checklist
+## 10. Departmental Approval Checklist
 
 | Department / Agent    | Reviewed | Reviewer Notes |
 | --------------------- | -------- | -------------- |
