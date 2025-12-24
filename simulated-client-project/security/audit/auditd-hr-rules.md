@@ -133,10 +133,10 @@ ausearch -k hr_delete | aureport -f
 
 ## 8. Related Documents
 
-* [hr-data-retention-policy.md](../policy/hr-data-retention-policy.md)
-* [user-access-policy.md](../policy/user-access-policy.md)
+* [hr-data-retention-policy.md](../../policy/hr-data-retention-policy.md)
+* [user-access-policy.md](../../policy/user-access-policy.md)
 * [file-permissions-audit.md](./file-permissions-audit.md)
-* [auditd-finance-rules.md](,,/auditd-finance-rules.md)
+* [auditd-finance-rules.md](,,/../auditd-finance-rules.md)
 
 ---
 
