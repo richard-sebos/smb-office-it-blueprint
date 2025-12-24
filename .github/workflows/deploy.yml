@@ -1,0 +1,43 @@
+name: Deploy Astro Site to GitHub Pages
+
+on:
+  push:
+    branches: [main]  # Change this if you're using a different source branch
+
+permissions:
+  contents: write     # Needed to push to the gh-pages branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./astro-site   # Adjust this if your Astro site is elsewhere
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the site
+        run: npm run build
+
+      - name: Disable Jekyll (required for GitHub Pages)
+        run: touch dist/.nojekyll
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./astro-site/dist
+          publish_branch: gh-pages
+
+
+
