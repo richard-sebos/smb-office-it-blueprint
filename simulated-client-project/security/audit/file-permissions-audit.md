@@ -146,10 +146,10 @@ Compare actual ACLs with:
 
 ## 8. Related Documents
 
-* [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
-* [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md)
+* [access-control-matrix.md](../access-control-matrix.md)
+* [file-share-permissions.md](../file-share-permissions.md)
 * [auditd-finance-rules.md](auditd-finance-rules.md)
-* [shared-services-policy.md](../../simulated-client-project/policy/shared-services-policy.md)
+* [shared-services-policy.md](../../policy/shared-services-policy.md)
 
 ---
 
