@@ -144,7 +144,7 @@ Violations include:
 - [onboarding-workflow.md](../workflows/onboarding-workflow.md)
 - [admin-checkout-policy.md](../policy/admin-checkout-policy.md)
 - [access-control-matrix.md](access-control-matrix.md)
-- [audit-log-policy.md](audit/audit-log-policy.md)
+- [audit-log-policy.md](policy/security/audit-log-policy.md)
 
 ---
 
