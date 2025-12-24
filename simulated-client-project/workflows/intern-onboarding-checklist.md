@@ -115,7 +115,6 @@ This checklist applies to:
 - [onboarding-workflow.md](onboarding-workflow.md)
 - [user-access-policy.md](../policy/user-access-policy.md)
 - [file-share-permissions.md](../security/file-share-permissions.md)
-- [intern-use-case.md](../use-cases/intern.md)
 - [access-control-matrix.md](../security/access-control-matrix.md)
 
 ---
