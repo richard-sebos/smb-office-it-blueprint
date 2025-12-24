@@ -155,9 +155,9 @@ Violations will result in internal follow-up and access review.
 ## 10. Related Documents
 
 - [admin-checkout-policy.md](admin-checkout-policy.md)
-- [file-share-permissions.md](file-share-permissions.md)
-- [financial-data-access-guidelines.md](../finance/financial-data-access-guidelines.md)
-- [secure-email-policy.md](secure-email-policy.md)
+- [file-share-permissions.md](../security/file-share-permissions.md)
+- [financial-data-access-guidelines.md](finance/financial-data-access-guidelines.md)
+- [secure-email-policy.md](../security/secure-email-policy.md)
 
 ---
 
