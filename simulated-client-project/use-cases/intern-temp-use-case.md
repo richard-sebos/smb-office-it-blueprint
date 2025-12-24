@@ -141,7 +141,6 @@ Accounts are created via script or Ansible with these controls enforced.
 
 - [user-access-policy.md](../policy/user-access-policy.md)
 - [intern-onboarding-checklist.md](../onboarding/intern-onboarding-checklist.md)
-- [automation-script-create-temp-user.sh](../../implementation/scripts/user-creation/create-temp-user.sh)
 
 ---
 
