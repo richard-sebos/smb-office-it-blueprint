@@ -5,7 +5,7 @@
   Author: IT Business Analyst, Linux Admin/Architect
   Created: 2025-12-23
   Updated: 2025-12-23
-  Version: v1.0
+  Version: v1.1
   Status: Draft
   Confidentiality: Internal
   Project Phase: Implementation
@@ -41,6 +41,7 @@
 - [2. Background](#2-background)
 - [3. Objectives](#3-objectives)
 - [4. Structure / Body](#4-structure--body)
+  - [4.0 Organizational Structure](#40-organizational-structure)
   - [4.1 System Overview](#41-system-overview)
   - [4.2 Infrastructure Architecture](#42-infrastructure-architecture)
   - [4.3 Security and Audit Requirements](#43-security-and-audit-requirements)
@@ -83,7 +84,8 @@ The SMB Office IT Blueprint project simulates a real-world small-to-medium busin
 This specification is built incrementally, with each pass adding requirements from additional source documents. The current version incorporates:
 
 1. **Audit and logging requirements** (Finance department monitoring)
-2. *(Future passes will add: HR audit, network topology, AD design, etc.)*
+2. **Organizational structure** (Departments, roles, reporting hierarchy)
+3. **File share structure** (Directory layout, naming conventions, access control)
 
 ---
 
@@ -108,6 +110,179 @@ This specification is built incrementally, with each pass adding requirements fr
 ---
 
 ## 4. Structure / Body
+
+### 4.0 Organizational Structure
+
+**Source Document:** `ORG-STRUCTURE-001` (simulated-org-chart.md)
+
+#### 4.0.1 Business Overview
+
+The simulated SMB Office represents a professional services firm with the following characteristics:
+
+- **Company Type:** Professional Services / Consulting Firm
+- **Employee Count:** 15-20 employees (simulated)
+- **Departments:** Executive, Finance, HR, Professional Services, IT
+- **Business Model:** Client project delivery, billable hours, fixed-fee consulting
+
+#### 4.0.2 Executive Leadership
+
+| Role | Reports To | Responsibilities | Workstation |
+|------|------------|------------------|-------------|
+| Managing Partner | Board/Investors | Overall leadership, strategic direction | `exec-ws01` |
+| Finance Manager | Managing Partner | Accounting, payroll oversight, budgeting | `finance-ws01` |
+| HR Manager | Managing Partner | Personnel management, policies, compliance | `hr-ws01` |
+| Project Manager | Managing Partner | IT projects, cross-departmental coordination | `pm-ws01` |
+
+**Access Level:** Executive team has elevated access to cross-departmental resources while maintaining separation of duties for sensitive data (Finance/HR).
+
+#### 4.0.3 Departmental Structure
+
+```text
+SMB Office
+├── Executive Team
+│   ├── Managing Partner (full administrative oversight)
+│   ├── Finance Manager (financial oversight)
+│   ├── HR Manager (personnel management)
+│   └── Project Manager (IT/project coordination)
+│
+├── Finance Department
+│   ├── Senior Accountant
+│   ├── Junior Accountant
+│   └── Finance Intern
+│
+├── HR Department
+│   ├── HR Generalist
+│   ├── Admin Assistant (multi-departmental support)
+│   └── HR Intern
+│
+├── Professional Services
+│   ├── Senior Professional (client-facing consultant)
+│   ├── Junior Professional (project support)
+│   └── Project Intern
+│
+└── IT Department (Simulated - Project Implementation)
+    ├── IT Administrator
+    ├── Linux Admin
+    └── Ansible Automation Engineer
+```
+
+#### 4.0.4 Role Definitions and Access Levels
+
+| Role | Department | Seniority | Primary Access Needs | Security Level |
+|------|------------|-----------|----------------------|----------------|
+| Managing Partner | Executive | Senior | Cross-departmental visibility (read), strategic reports | **High** |
+| Senior Professional | Professional Svc | Senior | Client project shares, billing visibility | Medium |
+| Junior Professional | Professional Svc | Mid-Level | Limited project access, supervised work | Low-Medium |
+| Admin Assistant | HR | Support | Shared templates, HR forms (read-only), scheduling | Low |
+| Finance Staff | Finance | Entry-Mid | Finance shares, invoice processing | **High** |
+| HR Staff | HR | Entry-Mid | HR shares (excluding personnel files) | **High** |
+| IT Administrator | IT | Admin | Infrastructure access, requires checkout for sensitive ops | **Critical** |
+| Intern | Varies | Entry | Minimal access, tightly scoped to training | Low |
+
+#### 4.0.5 Active Directory Organizational Unit Mapping
+
+**Domain:** `smboffice.local`
+
+**OU Structure Derived from Org Chart:**
+
+```
+smboffice.local
+├── OU=Users
+│   ├── OU=Executive
+│   │   ├── CN=Managing Partner
+│   │   ├── CN=Finance Manager
+│   │   ├── CN=HR Manager
+│   │   └── CN=Project Manager
+│   ├── OU=Finance
+│   │   ├── OU=FinanceManagers (Finance Manager)
+│   │   ├── OU=FinanceStaff (Senior/Junior Accountants)
+│   │   └── OU=FinanceInterns
+│   ├── OU=HR
+│   │   ├── OU=HRManagers (HR Manager)
+│   │   ├── OU=HRStaff (HR Generalist, Admin Assistant)
+│   │   └── OU=HRInterns
+│   ├── OU=ProfessionalServices
+│   │   ├── OU=SeniorProfessionals
+│   │   ├── OU=JuniorProfessionals
+│   │   └── OU=ProjectInterns
+│   └── OU=IT
+│       ├── OU=ITAdmins
+│       └── OU=ITAutomation
+├── OU=Groups
+│   ├── OU=Executive
+│   ├── OU=Finance
+│   ├── OU=HR
+│   ├── OU=ProfessionalServices
+│   ├── OU=SharedServices
+│   └── OU=Infrastructure
+└── OU=Computers
+    ├── OU=Workstations
+    │   ├── OU=Executive
+    │   ├── OU=Finance
+    │   ├── OU=HR
+    │   └── OU=ProfessionalServices
+    └── OU=Servers
+```
+
+#### 4.0.6 Security Group Mapping
+
+**Global Groups (GG-) by Department:**
+
+| Department | Global Group | Nested In | Purpose |
+|------------|--------------|-----------|---------|
+| Executive | `GG-Executive` | Various read-only groups | Executive cross-department visibility |
+| Finance | `GG-Finance` | `SG-Finance-Files-RW` | Finance department access |
+| Finance | `GG-Finance-Managers` | `GG-Finance`, `SG-Client-Billing` | Finance manager elevated access |
+| HR | `GG-HR-Department` | `SG-HR-Files-RW` | HR department access |
+| HR | `GG-HR-Managers` | `GG-HR-Department` | HR manager personnel file access |
+| HR | `GG-HR-Assistants` | Shared resources | Admin Assistant multi-dept support |
+| Professional | `GG-Prof-Senior` | Project shares | Senior consultant access |
+| Professional | `GG-Prof-Junior` | Limited project shares | Junior consultant access |
+| IT | `GG-IT-Admins` | Infrastructure groups | IT administrative access |
+| All | `GG-AllStaff` | Company-wide resources | Company-wide shared resources |
+
+**Domain Local Groups (SG-) for Resources:**
+
+| Resource Group | Purpose | Members |
+|----------------|---------|---------|
+| `SG-Finance-Files-RW` | Finance share access | `GG-Finance` |
+| `SG-HR-Files-RW` | HR share access | `GG-HR-Department` |
+| `SG-Policy-Docs` | Company policy documents | `GG-AllStaff`, `GG-Executive` |
+| `SG-Onboarding-Access` | Onboarding materials | `GG-HR-Department`, `GG-IT-Admins` |
+| `SG-Templates-Write` | Shared templates | `GG-HR-Assistants`, `GG-AllStaff` |
+
+#### 4.0.7 Reporting Hierarchy and Approval Workflows
+
+**Financial Approvals:**
+- Invoice approvals: Finance Manager → Managing Partner (over $10k)
+- Budget changes: Finance Manager → Managing Partner
+- Payroll changes: Finance Manager (with HR Manager coordination)
+
+**HR Approvals:**
+- New hires: HR Manager → Managing Partner
+- Terminations: HR Manager → Managing Partner (notify Finance)
+- Policy changes: HR Manager → Managing Partner
+
+**IT Changes:**
+- Infrastructure changes: IT Admin → Project Manager → Managing Partner
+- User account changes: Requestor → HR Manager → IT Admin (via onboarding workflow)
+
+#### 4.0.8 Alignment with Use Cases
+
+Each organizational role maps to documented use cases:
+
+| Role | Use Case Document | Security Profile | Workstation |
+|------|-------------------|------------------|-------------|
+| Finance Manager | `finance-manager-use-case.md` | **High** - SOX controls | `finance-ws01` |
+| HR Manager | `hr-manager-use-case.md` | **High** - HIPAA-style controls | `hr-ws01` |
+| Admin Assistant | `admin-assistant-use-case.md` | Medium - Multi-dept support | `assist-ws01` |
+| Senior Professional | `senior-professional-use-case.md` | Medium - Client data | `prof-ws01` |
+| Junior Professional | `junior-professional-use-case.md` | Low-Medium - Supervised | `prof-ws02` |
+| Managing Partner | `managing-partner-use-case.md` | **Critical** - Full visibility | `exec-ws01` |
+| IT Administrator | `it-admin-use-case.md` | **Critical** - Infrastructure | `it-ws01` |
+| Intern/Temp | `intern-temp-use-case.md` | Low - Restricted training | `temp-ws##` |
+
+---
 
 ### 4.1 System Overview
 
@@ -177,37 +352,264 @@ smboffice.local
 
 #### 4.2.2 File Server Architecture
 
+**Source Documents:**
+- `INFRA-FS-STRUCTURE-001` (file-share-structure.md)
+- Role requirements documents (Finance, HR, Admin Assistant)
+
 **Server:** `files01.smboffice.local`
-**Storage Backend:** `/srv/samba/shares` (LUKS encrypted volume)
+**Storage Backend:** `/srv/shares` (primary path), symlinked to `/srv/samba/shares` (LUKS encrypted volume)
 **File System:** ext4 or XFS with ACL support
+**Share Management:** Samba 4.x with VFS modules (acl_xattr, full_audit)
 
-**Share Structure:**
+##### 4.2.2.1 Share Design Principles
 
+The file share structure follows these key principles:
+
+1. **Department-Based Organization:** Shares organized by department and function
+2. **AD Group Access Control:** All access controlled via AD Security Groups (no individual user permissions)
+3. **Subfolder Granularity:** Restricted folders clearly documented with specific group access
+4. **Access-Based Enumeration:** Users only see shares/folders they have permission to access
+5. **Audit Logging:** Sensitive shares (Finance, HR) have full audit logging via VFS modules
+6. **Naming Consistency:** Standardized naming conventions for shares and folders
+
+##### 4.2.2.2 Top-Level Directory Structure
+
+**Physical Path:** `/srv/shares/` (or `/srv/samba/shares/`)
+
+```text
+/srv/shares/
+├── Common/                    # Company-wide shared resources
+│   ├── CompanyDocs/          # General company documentation
+│   └── Templates/            # Shared document templates
+├── HR/                        # Human Resources department
+│   ├── Personnel/            # Employee records (HR Managers ONLY)
+│   ├── Onboarding/           # New hire materials (HR + IT)
+│   ├── Policies/             # HR policies and handbooks
+│   ├── Forms/
+│   │   └── Templates/        # HR form templates (Admin Assistant read access)
+│   ├── Benefits/             # Benefits information
+│   └── Compliance/           # I-9, EEO, safety training
+├── Finance/                   # Finance department
+│   ├── Payroll/              # Payroll data (Finance RW, HR read-only)
+│   ├── Reporting/            # Financial reports
+│   ├── Invoices/             # Client invoices (audit target)
+│   ├── Budgets/              # Budget documents (audit target)
+│   └── Exports/              # Sensitive data exports (audit target)
+├── Professional/              # Professional Services department
+│   ├── Clients/              # Client project folders
+│   └── Projects/             # Internal project data
+├── IT/                        # IT department
+│   ├── Installers/           # Software installation packages
+│   ├── Configs/              # Configuration backups
+│   └── Documentation/        # IT documentation
+├── Temp/                      # Temporary uploads
+│   └── Uploads/              # Auto-purged every 24 hours
+├── Clients/                   # Client-specific data (cross-department)
+│   └── Billing/              # Client billing records (Finance Managers)
+├── Company/                   # Company-wide resources
+│   └── Policies/             # Company policies (HR RW, others read)
+└── Users/                     # User home directories
+    └── <username>/           # Individual user storage
 ```
-/srv/samba/shares/
-├── finance/
-│   ├── reports/
-│   ├── budgets/
-│   ├── invoices/              # Audit target
-│   ├── payroll/               # Audit target
-│   ├── exports/               # Audit target
-│   └── budgets/               # Audit target
-├── hr/
-│   ├── personnel/             # HR Managers only
-│   ├── forms/
-│   ├── policies/
-│   ├── onboarding/
-│   ├── benefits/
-│   └── compliance/
-├── clients/
-│   └── billing/
-├── company/
-│   └── policies/
-├── shared/
-│   └── templates/
-└── users/
-    └── <username>/
+
+##### 4.2.2.3 Share Configuration Table
+
+| Share Name | Physical Path | AD Group | Access Level | Browseable | Audit Level | Notes |
+|------------|---------------|----------|--------------|------------|-------------|-------|
+| `common` | `/srv/shares/Common/` | `GG-AllStaff` | Read/Write | Yes | Standard | Company-wide templates and docs |
+| `hr` | `/srv/shares/HR/` | `GG-HR-Department` | Full | **No** | **Full** | HR department files (hidden) |
+| `hr-personnel` | `/srv/shares/HR/Personnel/` | `SG-HR-Managers` | Full | **No** | **Full** | Personnel records (managers only) |
+| `finance` | `/srv/shares/Finance/` | `GG-Finance` | Full | **No** | **Full** | Finance department files (hidden) |
+| `finance-payroll` | `/srv/shares/Finance/Payroll/` | `GG-Finance`, `SG-Payroll-ReadOnly` | Finance: RW, HR: RO | **No** | **Full** | Payroll data (separation of duties) |
+| `professional` | `/srv/shares/Professional/` | `GG-Prof-Senior`, `GG-Prof-Junior` | Tiered | Yes | Standard | Professional services projects |
+| `it` | `/srv/shares/IT/` | `GG-IT-Admins` | Full | **No** | Standard | IT administrative files |
+| `temp` | `/srv/shares/Temp/` | `GG-AllStaff` | Write-Only | Yes | Standard | Temporary uploads (auto-purge 24h) |
+| `clients` | `/srv/shares/Clients/` | Various | Varies | **No** | **Full** | Client-specific data |
+| `company-policies` | `/srv/shares/Company/Policies/` | `SG-Policy-Docs` | HR/Mgmt: RW, Others: RO | Yes | Write | Company policies |
+| `users` | `/srv/shares/Users/` | Individual users | Per-user | **No** | Standard | User home directories |
+
+**Key:**
+- **RW** = Read/Write
+- **RO** = Read-Only
+- **Full** = Complete access (read, write, delete, modify ACLs)
+- **Standard** = Basic file access logging
+- **Full** = Comprehensive audit logging (VFS full_audit module)
+
+##### 4.2.2.4 Naming Conventions
+
+**Top-Level Shares:**
+- Lowercase, department-aligned (e.g., `finance`, `hr`, `professional`)
+- Hyphenated for multi-word (e.g., `company-policies`)
+
+**Subfolders:**
+- CamelCase preferred (e.g., `CompanyDocs`, `OnboardingMaterials`)
+- Underscores allowed for clarity (e.g., `Payroll_Reports`, `HR_Policies`)
+- **Avoid spaces** in directory names to prevent escaping issues
+
+**Client Project Folders:**
+- Format: `clientname_projectname_YYYYMM`
+- Example: `acmecorp_redesign_202512`
+- Keeps chronological ordering and clear identification
+
+**Employee Personnel Folders:**
+- Format: `lastname_firstname` or `username`
+- Example: `adams_jennifer` or `jennifer.adams`
+- Nested under `/HR/Personnel/active-employees/` or `/HR/Personnel/terminated-employees/`
+
+##### 4.2.2.5 Access Control and Ownership
+
+**Access Control Method:**
+- **Primary:** AD Security Groups (LDAP/Kerberos integration)
+- **Secondary:** POSIX ACLs for filesystem-level enforcement
+- **Tertiary:** Samba share-level permissions (`valid users`, `read list`, `write list`)
+
+**No Individual User Permissions:**
+- All access granted via group membership
+- Simplifies management and audit trail
+- Changes made at group level only
+
+**Folder Ownership Standards:**
+- **Owner:** `root` (system)
+- **Group Owner:** Matching AD group (e.g., `GG-Finance` for finance folders)
+- **Base Permissions:** `770` (owner/group full, others none) or more restrictive
+- **ACLs Applied:** Extended POSIX ACLs via `setfacl` for fine-grained control
+
+**Example ACL Configuration:**
+
+```bash
+# Finance share - Full access for Finance group
+setfacl -R -m g:GG-Finance:rwx /srv/shares/Finance
+setfacl -R -d -m g:GG-Finance:rwx /srv/shares/Finance
+
+# HR Personnel - Managers only
+setfacl -R -m g:SG-HR-Managers:rwx /srv/shares/HR/Personnel
+setfacl -R -d -m g:SG-HR-Managers:rwx /srv/shares/HR/Personnel
+setfacl -R -m g:GG-HR-Department:--- /srv/shares/HR/Personnel  # Explicit deny
+
+# Payroll - Finance RW, HR RO (separation of duties)
+setfacl -R -m g:GG-Finance:rwx /srv/shares/Finance/Payroll
+setfacl -R -m g:SG-Payroll-ReadOnly:r-x /srv/shares/Finance/Payroll
+setfacl -R -d -m g:GG-Finance:rwx /srv/shares/Finance/Payroll
+setfacl -R -d -m g:SG-Payroll-ReadOnly:r-x /srv/shares/Finance/Payroll
 ```
+
+##### 4.2.2.6 Security and Compliance Notes
+
+**Sensitive Folders with Enhanced Controls:**
+
+| Folder | Security Measures | Compliance |
+|--------|------------------|------------|
+| `/HR/Personnel` | - HR Managers only<br>- Full audit logging<br>- Separate backup<br>- Monthly access review | HIPAA-style (employee health data) |
+| `/Finance/Payroll` | - Full audit logging<br>- Separation of duties (HR read-only)<br>- Backup encryption<br>- Quarterly access review | SOX (financial data) |
+| `/Finance/Invoices` | - Full audit logging<br>- Manager approval for exports<br>- Backup retention (7 years) | SOX |
+| `/Finance/Budgets` | - Full audit logging<br>- Version control<br>- Change tracking | SOX |
+
+**Automated Maintenance:**
+
+```bash
+# Temp folder auto-purge (cron job)
+0 2 * * * find /srv/shares/Temp/Uploads -type f -mtime +1 -delete
+
+# Access review reminders (quarterly)
+0 9 1 */3 * /usr/local/bin/generate-access-review-report.sh
+
+# Backup verification (weekly)
+0 3 * * 0 /usr/local/bin/verify-share-backups.sh
+```
+
+##### 4.2.2.7 Samba Share Configuration Examples
+
+**Common Share (Company-Wide):**
+
+```ini
+[common]
+path = /srv/shares/Common
+comment = Company-wide shared templates and documents
+valid users = @GG-AllStaff
+read list = @GG-AllStaff
+write list = @GG-AllStaff
+create mask = 0664
+directory mask = 0775
+vfs objects = acl_xattr
+browseable = yes
+```
+
+**Finance Share (Department-Specific, Full Audit):**
+
+```ini
+[finance]
+path = /srv/shares/Finance
+comment = Finance Department - Restricted Access
+valid users = @GG-Finance
+read list = @GG-Finance
+write list = @GG-Finance
+create mask = 0660
+directory mask = 0770
+vfs objects = acl_xattr full_audit
+full_audit:prefix = %u|%I|%m|%S
+full_audit:success = mkdir rmdir write unlink rename
+full_audit:failure = all
+full_audit:facility = local5
+full_audit:priority = notice
+browseable = no
+```
+
+**HR Personnel Share (Managers Only, Full Audit):**
+
+```ini
+[hr-personnel]
+path = /srv/shares/HR/Personnel
+comment = Employee Personnel Records - HR Manager Access Only
+valid users = @SG-HR-Managers
+read list = @SG-HR-Managers
+write list = @SG-HR-Managers
+create mask = 0660
+directory mask = 0770
+vfs objects = acl_xattr full_audit
+full_audit:prefix = %u|%I|%m|%S
+full_audit:success = all
+full_audit:failure = all
+full_audit:facility = local5
+full_audit:priority = notice
+browseable = no
+```
+
+**Temp Share (Write-Only Upload):**
+
+```ini
+[temp]
+path = /srv/shares/Temp
+comment = Temporary uploads - Auto-purged every 24 hours
+valid users = @GG-AllStaff
+write list = @GG-AllStaff
+read list = @GG-IT-Admins
+create mask = 0666
+directory mask = 0777
+browseable = yes
+guest ok = no
+```
+
+##### 4.2.2.8 Integration with Organizational Structure
+
+**Department-to-Share Mapping:**
+
+| Department | Primary Share | Secondary Shares | Notes |
+|------------|--------------|------------------|-------|
+| Executive | Read access to most | `common`, departmental read-only | Strategic visibility |
+| Finance | `finance` | `clients` (billing), `hr` (payroll read) | Separation of duties with HR |
+| HR | `hr`, `hr-personnel` | `finance` (payroll read), `company-policies` | Separation of duties with Finance |
+| Professional Services | `professional` | `clients`, `common` | Client project work |
+| Admin Assistant | `common`, `company-policies` | `hr` (forms read-only) | Multi-department support |
+| IT | `it` | All (read-only for audit) | Infrastructure management |
+
+##### 4.2.2.9 Future Enhancements
+
+**Planned Additions:**
+- Versioning integration (e.g., shadow copies for Finance/HR)
+- Quota management per department
+- DFS namespace for distributed file access
+- Offline file sync for remote workers
+- Encryption-at-rest validation and key management
 
 ---
 
@@ -664,6 +1066,10 @@ ansible/
 
 ### Source Documents (Requirements)
 
+**Organizational Structure:**
+- [simulated-org-chart.md](../../simulated-client-project/org/simulated-org-chart.md) - `ORG-STRUCTURE-001`
+- [file-share-structure.md](../../simulated-client-project/org/file-share-structure.md) - `INFRA-FS-STRUCTURE-001`
+
 **Use Cases:**
 - [admin-assistant-use-case.md](../../simulated-client-project/use-cases/admin-assistant-use-case.md)
 - [finance-manager-use-case.md](../../simulated-client-project/use-cases/finance-manager-use-case.md)
@@ -675,7 +1081,7 @@ ansible/
 - [hr-manager-requirements.md](../requirements/hr-manager-requirements.md)
 
 **Audit and Security:**
-- [auditd-finance-rules.md](../../simulated-client-project/audit/auditd-finance-rules.md)
+- [auditd-finance-rules.md](../../simulated-client-project/audit/auditd-finance-rules.md) - `SECURITY-AUDITD-FIN-001`
 
 **Standards:**
 - [markdown.md](../../standards/markdown.md)
@@ -695,6 +1101,7 @@ ansible/
 | Version | Date | Reviewer | Notes |
 |---------|------|----------|-------|
 | v1.0 | 2025-12-23 | IT Business Analyst | Initial system specification created from audit requirements (Finance) |
+| v1.1 | 2025-12-23 | IT Business Analyst, SMB Analyst | Added organizational structure and file share structure from org documents |
 
 ---
 
@@ -719,7 +1126,7 @@ ansible/
 
 ## 📝 Document Build Notes
 
-### Current Pass: v1.0
+### Pass v1.0 (Initial)
 **Source Documents Incorporated:**
 - `SECURITY-AUDITD-FIN-001` - Finance department auditd rules and monitoring
 
@@ -728,18 +1135,41 @@ ansible/
 - 4.6.1 SOX-Style Controls (Finance)
 - 4.7.1 Log Aggregation Architecture
 
-**Sections Pending Future Passes:**
-- 4.2.1 Active Directory Structure (detailed group policies)
-- 4.3.2 HR Department Audit Rules
-- 4.5 Network Architecture (detailed VLAN topology)
-- 4.7.2 Monitoring Dashboards
-- 4.8 Backup and Recovery (detailed procedures)
+### Pass v1.1 (Current)
+**Source Documents Incorporated:**
+- `ORG-STRUCTURE-001` - Simulated organization chart
+- `INFRA-FS-STRUCTURE-001` - File share structure and layout
 
-### Next Planned Pass: v1.1
+**Sections Completed:**
+- 4.0 Organizational Structure (all subsections)
+- 4.2.2 File Server Architecture (comprehensive expansion)
+  - Share design principles
+  - Directory structure
+  - Share configuration table
+  - Naming conventions
+  - Access control and ownership
+  - Security and compliance notes
+  - Samba configuration examples
+  - Integration with organizational structure
+
+**Sections Enhanced:**
+- 4.0.5 Active Directory OU mapping (aligned with org chart)
+- 4.0.6 Security group mapping (comprehensive department groupings)
+- 4.2.2.8 Department-to-share mapping
+
+**Sections Pending Future Passes:**
+- 4.2.1 Active Directory Structure (detailed group policies, GPO settings)
+- 4.3.2 HR Department Audit Rules
+- 4.5 Network Architecture (detailed VLAN topology, firewall rules)
+- 4.7.2 Monitoring Dashboards
+- 4.8 Backup and Recovery (detailed backup procedures, restore testing)
+
+### Next Planned Pass: v1.2
 **Planned Source Documents:**
-- HR audit requirements
-- Network topology documents
-- AD design documents
+- HR audit requirements documents
+- Network topology and VLAN specifications
+- AD GPO design documents
+- Backup and recovery procedures
 
 ---
 
