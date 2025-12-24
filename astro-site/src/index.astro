@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/DefaultLayout.astro';
+---
+
+<Layout title="SMB Office IT Blueprint">
+  <section style="padding: 2rem; text-align: center;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+      🏢 SMB Office IT Blueprint
+    </h1>
+    <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto 2rem;">
+      A simulated business IT environment designed for secure, real-world deployments using Samba AD, Linux, Ansible, and best practices.
+    </p>
+
+    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+      <a href="/docs/" class="button">📘 IT Documentation</a>
+      <a href="/articles/" class="button">📰 Technical Articles</a>
+      <a href="/policies/" class="button">📜 Business Policies</a>
+      <a href="/use-cases/" class="button">👥 Use Cases</a>
+    </div>
+
+    <div style="margin-top: 3rem; font-size: 0.9rem; color: #666;">
+      <p>
+        🔐 Some content is protected and only accessible through authorized workflows.
+      </p>
+      <p>
+        🚀 Built with <a href="https://astro.build" target="_blank">Astro</a> & hosted on GitHub Pages.
+      </p>
+    </div>
+  </section>
+
+  <style>
+    .button {
+      padding: 0.75rem 1.25rem;
+      background: #007acc;
+      color: white;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .button:hover {
+      background: #005fa3;
+    }
+  </style>
+</Layout>
