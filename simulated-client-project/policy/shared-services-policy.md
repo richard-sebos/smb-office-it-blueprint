@@ -134,7 +134,7 @@ Shared IT services are foundational to business operations and must support mult
 
 ## 10. Related Files
 
-- [file-share-structure.md](../implementation/filesystem/file-share-structure.md)
+- [file-share-structure.md](../org/file-share-structure.md)
 - [printer-access-policy.md](./printer-access-policy.md)
 - [audit-log-policy.md](../policy/security/audit-log-policy.md)
 
