@@ -129,7 +129,7 @@ File access should be managed **via group membership**, not directly at user lev
 
 ## 5. Related Files
 
-- [simulated-org-chart.md](./org-structure/simulated-org-chart.md)
+- [simulated-org-chart.md](./org/simulated-org-chart.md)
 - [group-policy-baseline.md](../policy/group-policy-baseline.md)
 
 ---
