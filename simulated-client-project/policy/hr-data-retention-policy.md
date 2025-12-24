@@ -138,7 +138,6 @@ Backups are encrypted using **restic** and stored in the **encrypted backup vaul
 
 ## 9. Related Documents
 
-- [hr-manager-use-case.md](../use-cases/hr-manager.md)
 - [file-share-permissions.md](../security/file-share-permissions.md)
 - [auditd-hr-rules.md](../../implementation/security/auditd/auditd-hr-rules.md)
 - [shared-services-policy.md](./shared-services-policy.md)
