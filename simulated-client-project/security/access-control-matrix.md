@@ -133,9 +133,8 @@ To provide a definitive source for mapping user roles to access privileges acros
 ## 8. Related Files
 
 - [executive-security-policy.md](../policy/executive-security-policy.md)
-- [file-share-structure.md](../implementation/filesystem/file-share-structure.md)
+- [file-share-structure.md](../org/file-share-structure.md)
 - [shared-services-policy.md](../policy/shared-services-policy.md)
-- [department-role-use-cases.md](../use-cases/README.md)
 
 ---
 
