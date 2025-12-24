@@ -127,9 +127,9 @@ This policy applies to:
 
 - [admin-checkout-policy.md](../admin-checkout-policy.md)
 - [auditd-finance-rules.md](../audit/auditd-finance-rules.md)
-- [file-share-permissions.md](../security/file-share-permissions.md)
-- [access-control-matrix.md](../security/access-control-matrix.md)
-- [group-policy-baseline.md](group-policy-baseline.md)
+- [file-share-permissions.md](../../security/file-share-permissions.md)
+- [access-control-matrix.md](../../security/access-control-matrix.md)
+- [group-policy-baseline.md](../../policy/group-policy-baseline.md)
 
 ---
 
