@@ -150,7 +150,6 @@ Standardized file naming improves search, auditability, and automation.
 - [finance-department-policy.md](../policy/finance-department-policy.md)
 - [shared-services-policy.md](../policy/shared-services-policy.md)
 - [executive-security-policy.md](../policy/executive-security-policy.md)
-- [git-crypt-encryption-policy.md](../../implementation/security/git-crypt-encryption-policy.md)
 
 ---
 
