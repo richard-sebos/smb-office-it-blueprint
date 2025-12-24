@@ -140,7 +140,7 @@ All access grants must be recorded in:
 - [user-access-policy.md](user-access-policy.md)
 - [file-share-permissions.md](../security/file-share-permissions.md)
 - [access-control-matrix.md](../security/access-control-matrix.md)
-- [auditd-finance-rules.md](../security/auditd-finance-rules.md)
+- [auditd-finance-rules.md](../audit/auditd-finance-rules.md)
 - [executive-security-policy.md](executive-security-policy.md)
 
 ---
