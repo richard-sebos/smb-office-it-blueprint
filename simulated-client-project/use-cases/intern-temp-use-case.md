@@ -140,7 +140,7 @@ Accounts are created via script or Ansible with these controls enforced.
 ## 5. Related Files
 
 - [user-access-policy.md](../policy/user-access-policy.md)
-- [intern-onboarding-checklist.md](../onboarding/intern-onboarding-checklist.md)
+- [intern-onboarding-checklist.md](../workflows/intern-onboarding-checklist.md)
 
 ---
 
