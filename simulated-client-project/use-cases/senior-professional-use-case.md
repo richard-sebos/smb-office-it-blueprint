@@ -143,7 +143,7 @@ Senior Professionals work cross-functionally across internal and external teams.
 
 ## 5. Related Files
 
-- [access-control-matrix.md](../../implementation/security/access-control-matrix.md)
+- [access-control-matrix.md](../security/access-control-matrix.md)
 - [project-onboarding-template.md](../templates/project-onboarding-template.md)
 - [client-access-policy.md](../policy/client-access-policy.md)
 
