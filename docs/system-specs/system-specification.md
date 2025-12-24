@@ -5,7 +5,7 @@
   Author: IT Business Analyst, Linux Admin/Architect
   Created: 2025-12-23
   Updated: 2025-12-23
-  Version: v1.2
+  Version: v1.3
   Status: Draft
   Confidentiality: Internal
   Project Phase: Implementation
@@ -88,6 +88,7 @@ This specification is built incrementally, with each pass adding requirements fr
 2. **Organizational structure** (Departments, roles, reporting hierarchy)
 3. **File share structure** (Directory layout, naming conventions, access control)
 4. **Policy frameworks** (Access control, GPO baseline, data retention, checkout procedures)
+5. **Security frameworks** (HR audit rules, access control matrix, file permissions, secure communications)
 
 ---
 
@@ -845,12 +846,102 @@ session required pam_tty_audit.so enable=always
 
 #### 4.3.2 HR Department Audit Rules
 
-*(To be added in future pass incorporating HR-specific audit requirements)*
+**Source Document:** `SECURITY-AUDITD-HR-001` (auditd-hr-rules.md)
 
-**Placeholder:**
-- HR personnel file access monitoring
-- Onboarding/offboarding activity tracking
-- PII access logging
+This section defines auditd monitoring rules for HR-related data directories to track access, changes, and deletion of employee records, evaluations, and onboarding documents.
+
+##### 4.3.2.1 HR Audit Scope
+
+Monitoring applies to:
+- HR Samba share: `/srv/shares/HR/`
+- Employee records (PDFs, docs)
+- Onboarding checklists
+- Disciplinary or performance evaluations
+- Access by users in `GG-HR-*` groups or privileged administrators
+
+##### 4.3.2.2 Targeted HR Paths
+
+| Target Path | Description |
+|-------------|-------------|
+| `/srv/shares/HR/` | Root of HR file share |
+| `/srv/shares/HR/Onboarding/` | New hire and intern documents |
+| `/srv/shares/HR/Evaluations/` | Performance review records |
+| `/srv/shares/HR/Personnel/` | Employee file archive |
+
+##### 4.3.2.3 HR Audit Rule Examples
+
+**Implementation Location:** `/etc/audit/rules.d/hr.rules` on `files01.smboffice.local`
+
+**Access Tracking:**
+
+```bash
+# HR Share Directory Access
+-w /srv/shares/HR/ -p rwa -k hr_access
+-w /srv/shares/HR/Personnel/ -p rwa -k hr_personnel
+-w /srv/shares/HR/Evaluations/ -p rwa -k hr_eval
+-w /srv/shares/HR/Onboarding/ -p rwa -k hr_onboarding
+```
+
+**File Deletion and Permission Changes:**
+
+```bash
+# Track file deletions in HR directories
+-a always,exit -F arch=b64 -S unlink -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_delete
+-a always,exit -F arch=b64 -S unlinkat -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_delete
+
+# Track permission changes
+-a always,exit -F arch=b64 -S chmod -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chmod
+-a always,exit -F arch=b64 -S fchmod -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chmod
+-a always,exit -F arch=b64 -S fchmodat -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chmod
+
+# Track ownership changes
+-a always,exit -F arch=b64 -S chown -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chown
+-a always,exit -F arch=b64 -S fchown -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chown
+-a always,exit -F arch=b64 -S lchown -F dir=/srv/shares/HR/ -F auid>=1000 -F auid!=4294967295 -k hr_chown
+```
+
+> 🔐 These rules apply to **all users** with UID ≥1000, excluding system accounts
+
+##### 4.3.2.4 HR Log Reporting and Review
+
+| Action | Frequency | Responsible Agent |
+|--------|-----------|-------------------|
+| `ausearch -k hr_access` | Weekly | IT Security Analyst |
+| Monthly audit log export | Monthly | Linux Admin |
+| HR Data Access Report | Quarterly | HR Manager, IT Security |
+
+**Common Commands:**
+
+```bash
+# Search HR access events
+ausearch -k hr_access
+
+# Generate file access report
+aureport --file --summary | grep HR
+
+# Review deletion events
+ausearch -k hr_delete | aureport -f
+
+# Check permission changes
+ausearch -k hr_chmod -ts recent
+```
+
+##### 4.3.2.5 Optional Alerts and Integrations
+
+- **auditd → rsyslog → Email alert** for unauthorized HR folder access
+- Integration with `fail2ban` or `Wazuh` if SIEM implemented
+- **Threshold alerting:** More than 5 file changes in HR folders within 5 minutes triggers alert
+
+##### 4.3.2.6 HR Audit Maintenance Tasks
+
+| Task | Interval | Responsible |
+|------|----------|-------------|
+| Verify HR audit rules loaded at boot | Monthly | Linux Admin |
+| Test audit rule coverage | Quarterly | IT Security |
+| Rotate HR logs via logrotate | Weekly | System Cron |
+| Purge HR logs older than 180 days | Monthly | System Admin |
+
+---
 
 #### 4.3.3 General Security Controls
 
@@ -1046,6 +1137,266 @@ shred -u -n 3 -z <filename>
 | IT Security Analyst | Audits logs and deletion compliance |
 | Linux Admin | Maintains automated cleanup and backups |
 | Project Doc Auditor | Ensures policy documents are aligned |
+
+---
+
+#### 4.3.6 File Permissions Audit Procedure
+
+**Source Document:** `AUDIT-FILE-PERMISSIONS-001` (file-permissions-audit.md)
+
+This section outlines the procedure for auditing file share permissions and ACL configurations across department shares to ensure proper role-based access enforcement.
+
+##### 4.3.6.1 Audit Objectives
+
+- Identify misconfigured permissions or overly broad access
+- Confirm correct group ownership (e.g., `GG-Finance-Staff`)
+- Verify ACL inheritance is properly applied
+- Detect unauthorized access to high-sensitivity folders
+- Log all manual changes made during audit
+
+##### 4.3.6.2 Audit Tools
+
+| Tool | Purpose |
+|------|---------|
+| `getfacl` | Linux filesystem ACL inspection |
+| `samba-tool ntacl` | Samba share permission inspection |
+| `auditctl` | Real-time monitoring |
+| `find` + `stat` | Bulk permission checks |
+| `csvkit` or spreadsheet | Reporting and analysis |
+
+**Cross-Reference:** Manual validation against [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
+
+##### 4.3.6.3 Audit Targets
+
+| Path | Classification | Audit Priority |
+|------|----------------|----------------|
+| `/srv/shares/finance/` | Confidential – payroll/reports | **HIGH** |
+| `/srv/shares/hr/` | Confidential – employee records | **HIGH** |
+| `/srv/shares/projects/` | Restricted – project team only | MEDIUM |
+| `/srv/shares/public/` | Public – read-only default | LOW |
+| `/srv/shares/assistants/` | Shared – support/admin-only | MEDIUM |
+
+##### 4.3.6.4 Audit Procedure
+
+**Step 1: Generate ACL Listings**
+
+```bash
+# Export ACLs for each sensitive share
+getfacl -R /srv/shares/finance > /tmp/audit/finance-acl.txt
+getfacl -R /srv/shares/hr > /tmp/audit/hr-acl.txt
+getfacl -R /srv/shares/projects > /tmp/audit/projects-acl.txt
+```
+
+**Step 2: Identify High-Risk Permissions**
+
+Look for:
+- `other::rwx` (world access - **CRITICAL**)
+- Groups outside expected role (e.g., `GG-IT-Admins` on HR shares)
+- Manual ACL overrides or removed inheritance
+- Executable permissions on non-script files
+
+**Step 3: Check Samba Share Access**
+
+```bash
+# Verify Samba NT ACLs match POSIX ACLs
+samba-tool ntacl get /srv/shares/finance
+samba-tool ntacl get /srv/shares/hr
+```
+
+**Step 4: Correlate With Access Control Matrix**
+
+Compare actual ACLs with documented access policies in:
+- Section 4.4.4.3 (Financial Data Access Authorization)
+- Section 4.3.7 (Access Control Matrix - below)
+- File share permissions specification
+
+##### 4.3.6.5 Findings Report Template
+
+| Path | Issue | Severity | Fix Required | Assigned To | Notes |
+|------|-------|----------|--------------|-------------|-------|
+| `/srv/shares/finance` | `other::r--` allows world-read | **HIGH** | Yes | Linux Admin | Remove other perms |
+| `/srv/shares/hr` | `GG-Exec` has write access | MEDIUM | Yes | AD Architect | Execs only need read |
+| `/srv/shares/public` | No issues | LOW | No | N/A | Compliant |
+
+##### 4.3.6.6 Corrective Actions
+
+- Adjust ACLs using `setfacl` for immediate remediation
+- If using Ansible: update ACL tasks in file server playbook
+- Document all remediations in audit log with timestamp
+- Notify affected department heads if group access changes impact users
+- Re-run audit after 48 hours to verify corrections
+
+##### 4.3.6.7 Audit Schedule
+
+| Audit Type | Frequency | Owner |
+|-----------|-----------|-------|
+| Full permission audit | Quarterly | IT Security Analyst |
+| Sensitive share spot check | Monthly | Linux Admin |
+| Post-migration audit | After any AD or file server change | IT Security Analyst |
+
+---
+
+#### 4.3.7 Access Control Matrix (RBAC)
+
+**Source Document:** `SECURITY-ACCESS-MATRIX-001` (access-control-matrix.md)
+
+This matrix provides the definitive source for mapping user roles to access privileges across systems, shares, and applications, supporting RBAC enforcement and access audits.
+
+##### 4.3.7.1 Role Definitions
+
+| Role | Description | Security Level |
+|------|-------------|----------------|
+| Receptionist | Front-desk access, general office tools | LOW |
+| Admin Assistant | Broad office access, but no HR/Finance personnel data | MEDIUM |
+| Junior Professional | Entry-level contributor | LOW-MEDIUM |
+| Senior Professional | Advanced contributor with project authority | MEDIUM |
+| Intern / Temp | Time-limited access, minimal privileges | LOW |
+| HR Manager | Access to HR documents and tools | **HIGH** |
+| Finance Manager | Access to accounting systems and files | **HIGH** |
+| IT Administrator | Full IT support and elevated permissions | **CRITICAL** |
+| Managing Partner | Strategic access, not administrative | **CRITICAL** |
+
+##### 4.3.7.2 File Share Access Matrix
+
+| File Share Path | Read-Only Roles | Read-Write Roles | Owner Group |
+|-----------------|-----------------|------------------|-------------|
+| `\\files01\shared\company` | All staff | Admin Assistant, Sr. Professional, Execs | `SG-Company-Docs` |
+| `\\files01\department\hr` | Execs, HR Manager | HR Manager | `GG-HR-Staff` |
+| `\\files01\department\finance` | Execs, Finance Manager | Finance Manager | `GG-Finance-Staff` |
+| `\\files01\projects\client-deliverables` | Sr. Prof., Jr. Prof. | Sr. Professional | `GG-Project-Staff` |
+| `\\files01\admin\executive-reports` | Execs only | Managing Partner | `GG-Exec-Leadership` |
+| `\\files01\interns\working` | Intern | Intern Supervisor | `GG-Interns` |
+
+##### 4.3.7.3 System Access Matrix
+
+| System/Workstation | Role Access | Access Level | Notes |
+|--------------------|-------------|--------------|-------|
+| `hr-ws01` | HR Manager | Full | Hardened workstation |
+| `finance-ws01` | Finance Manager | Full | LUKS encrypted, MFA required |
+| `admin-ws01` | Admin Assistant | Full | Standard security profile |
+| `intern-ws01` | Intern / Temp | Full | Auto-disable after contract period |
+| `exec-ws01` | Managing Partner | Full (isolated) | Enhanced encryption, air-gapped backups |
+| `itadmin-ws01` | IT Administrator | Full Admin | Checkout required for sensitive ops |
+| `files01`, `print01` | All users | Networked use | AD authentication required |
+| `dc01`, `dc02` | IT Admin, AD Architect | Admin Only | Bastion access, 2FA required |
+
+##### 4.3.7.4 Application and Service Access
+
+| Application / Tool | Roles With Access | Authentication Method | Notes |
+|--------------------|-------------------|----------------------|-------|
+| LibreOffice / Office Suite | All office roles | AD integrated | General productivity |
+| Finance System (Simulated) | Finance Manager, Execs | AD + SAML | Web-based access |
+| HR Tracker (Simulated) | HR Manager, Execs | AD + SAML | Internal portal |
+| CUPS Printer Queue | All staff | AD group mappings | See section 4.4.4.5 |
+| Shared Calendar System | All roles | AD credentials | Read/write based on dept group |
+| Git-based Docs (Public) | All staff | Read-only, no auth | Deployed via GitHub Pages |
+| Git-based Docs (Encrypted) | Sr. Pro, IT Admin, Editors | SSH key + git-crypt | Controlled repo access |
+
+##### 4.3.7.5 Administrative Access Controls
+
+| Admin Function | Role / Group | Approval Required | Notes |
+|----------------|--------------|-------------------|-------|
+| AD User Management | IT Administrator (`GG-IT-Admins`) | Department Head | Account creation/modification |
+| File Share ACLs | IT Admin, AD Architect | IT Security | Permission changes logged |
+| Git Repository Secrets | IT Admin, Content Editor | Project Manager | Encrypted via git-crypt |
+| Print Queue Admin | IT Admin | None (routine ops) | Printer group assignment |
+| Security Logs (auditd) | Security Analyst, IT Admin | None (read-only) | Reviewed monthly |
+| Remote Access (SSH) | IT Admin | None (routine) | Key-based only, logged |
+| Server Reboots / Updates | IT Admin, Linux Architect | Change ticket | Scheduled maintenance window |
+
+##### 4.3.7.6 Access Review and Auditing
+
+- **Quarterly Access Review:** IT Security Analyst validates all group memberships
+- **Access Change Requests:** Via IT ticket system, approved by department head
+- **Scripted Audit Tools:** Ansible playbook to validate AD group assignments
+- **Change Tracking:** All AD group assignments tracked in Git under `implementation/roles/ad-groups/*.yml`
+- **Anomaly Detection:** Automated scripts flag unauthorized group memberships weekly
+
+---
+
+#### 4.3.8 Secure Email Policy
+
+**Source Document:** `POLICY-EMAIL-SECURE-001` (secure-email-policy.md)
+
+This policy defines secure email usage within the SMB office environment, including encryption, sensitive data handling, and third-party communication requirements.
+
+##### 4.3.8.1 Email Usage Guidelines
+
+- Use email only for **official business communication**
+- Avoid using personal email accounts for company matters
+- Do not share login credentials or allow unauthorized access
+- Use department-specific signatures and branding
+
+##### 4.3.8.2 Encryption and Transmission Requirements
+
+| Email Type | Encryption Requirement |
+|------------|------------------------|
+| Internal emails (staff → staff) | TLS enforced (server-level) |
+| External emails (staff → client) | S/MIME or PGP if sensitive data |
+| Attachments with PII/financials | Encrypted (ZIP+passphrase or secure link) |
+| Webmail access | HTTPS + MFA enforced |
+
+**Supported Encryption Tools:**
+- GPG/PGP for user-level encryption
+- Thunderbird or Evolution mail clients with OpenPGP support
+- Nextcloud Mail integration with secure portal links
+
+##### 4.3.8.3 Sensitive Data Handling
+
+**Never send via unencrypted email:**
+- Social Security numbers or national ID numbers
+- Banking or credit card information
+- Login credentials or API keys
+- Internal financial reports (unless cleared by Finance Manager)
+
+**If email transmission required:**
+1. Encrypt the attachment using password-protected ZIP or GPG
+2. Send password via separate channel (SMS, phone call, Signal)
+3. CC `it-security@smboffice.local` for audit trail
+4. Use email classification tags (see section 4.3.8.5)
+
+##### 4.3.8.4 External Communication Policy
+
+| Recipient Type | Policy Enforcement |
+|----------------|-------------------|
+| Clients | May receive secure attachments or portal links |
+| Vendors | Email allowed with signed NDA on file |
+| Job applicants | PII protection applies, use secure forms |
+| Legal/Government | Use encrypted channels only, no standard email |
+
+**Required Email Footer:**
+> **CONFIDENTIAL:** This message may contain sensitive information intended for the recipient only. If you received this in error, please delete and notify sender immediately.
+
+##### 4.3.8.5 Email Classification Rules
+
+| Classification | Email Permissions | Handling Requirement |
+|----------------|-------------------|----------------------|
+| Public | Open distribution allowed | No encryption required |
+| Internal Use Only | Internal users only | TLS enforced |
+| Confidential | Role-restricted | Encrypted attachment or secure portal |
+| Restricted | Executives/IT only | PGP or platform-based secure channel |
+
+**Implementation:** Email classification tags added via mail client plugins or server-side filters
+
+##### 4.3.8.6 Monitoring and Logging
+
+- Outbound emails logged via mail server (`postfix` logs on `mail01`)
+- **DLP (Data Loss Prevention):** Flagged keywords auto-scanned (SSNs, credit cards, "confidential")
+- Weekly reports reviewed by IT Security Analyst
+- Alert triggers for suspicious file types: `.xls`, `.csv`, `.sql` with financial keywords
+- Retention: Email logs retained for 180 days
+
+##### 4.3.8.7 Violations and Enforcement
+
+**Violations include:**
+- Sending unencrypted confidential data
+- Forwarding sensitive information to personal accounts
+- Repeated misuse of external email for unauthorized purposes
+
+**Disciplinary Action:**
+- First violation: Warning + security awareness retraining
+- Repeated violations: Account restriction, access review by IT Security
+- Serious breach: Escalated to HR and Security Committee, potential termination
 
 ---
 
@@ -1616,6 +1967,13 @@ ansible/
 - [shared-services-policy.md](../../simulated-client-project/policy/shared-services-policy.md) - `POLICY-INFRA-SSP-001`
 - [finance-department-policy.md](../../simulated-client-project/policy/finance-department-policy.md) - `POLICY-FINANCE-001`
 
+**Security Documents:**
+- [auditd-hr-rules.md](../../simulated-client-project/security/audit/auditd-hr-rules.md) - `SECURITY-AUDITD-HR-001`
+- [file-permissions-audit.md](../../simulated-client-project/security/audit/file-permissions-audit.md) - `AUDIT-FILE-PERMISSIONS-001`
+- [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md) - `SECURITY-ACCESS-MATRIX-001`
+- [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md) - `SECURITY-FILES-001`
+- [secure-email-policy.md](../../simulated-client-project/security/secure-email-policy.md) - `POLICY-EMAIL-SECURE-001`
+
 **Standards:**
 - [markdown.md](../../standards/markdown.md)
 
@@ -1636,6 +1994,7 @@ ansible/
 | v1.0 | 2025-12-23 | IT Business Analyst | Initial system specification created from audit requirements (Finance) |
 | v1.1 | 2025-12-23 | IT Business Analyst, SMB Analyst | Added organizational structure and file share structure from org documents |
 | v1.2 | 2025-12-23 | IT Security Analyst, IT Business Analyst | Added policy frameworks: GPO baseline, access control, data retention, administrative checkout procedures |
+| v1.3 | 2025-12-23 | IT Security Analyst, Linux Admin/Architect | Added security frameworks: HR audit rules, file permissions audit, access control matrix, secure email policy |
 
 ---
 
@@ -1691,7 +2050,7 @@ ansible/
 - 4.0.6 Security group mapping (comprehensive department groupings)
 - 4.2.2.8 Department-to-share mapping
 
-### Pass v1.2 (Current)
+### Pass v1.2
 **Source Documents Incorporated:**
 - `POLICY-USER-ACCESS-001` - User access control policy
 - `POLICY-GPO-BASELINE-001` - Group policy baseline
@@ -1742,19 +2101,57 @@ ansible/
 - Previous 4.9 Implementation Standards → 4.10 Implementation Standards
   - All subsections renumbered from 4.9.x to 4.10.x
 
+### Pass v1.3 (Current)
+**Source Documents Incorporated:**
+- `SECURITY-AUDITD-HR-001` - HR department auditd monitoring rules
+- `AUDIT-FILE-PERMISSIONS-001` - File share permissions audit procedure
+- `SECURITY-ACCESS-MATRIX-001` - Access control matrix (RBAC overview)
+- `SECURITY-FILES-001` - File share permissions policy
+- `POLICY-EMAIL-SECURE-001` - Secure email policy
+
+**Sections Completed:**
+- **4.3.2 HR Department Audit Rules** (EXPANDED from placeholder)
+  - HR audit scope and targeted paths
+  - Comprehensive audit rule examples (access tracking, file deletion, permission changes)
+  - HR log reporting and review procedures
+  - Optional alerts and integrations
+  - Maintenance tasks schedule
+- **4.3.6 File Permissions Audit Procedure** (NEW)
+  - Audit objectives and tools
+  - Audit targets by classification
+  - Step-by-step audit procedure
+  - Findings report template
+  - Corrective actions and audit schedule
+- **4.3.7 Access Control Matrix (RBAC)** (NEW)
+  - Role definitions with security levels
+  - File share access matrix
+  - System access matrix
+  - Application and service access
+  - Administrative access controls
+  - Access review and auditing procedures
+- **4.3.8 Secure Email Policy** (NEW)
+  - Email usage guidelines
+  - Encryption and transmission requirements
+  - Sensitive data handling procedures
+  - External communication policy
+  - Email classification rules
+  - Monitoring, logging, and enforcement
+
+**Sections Enhanced:**
+- 4.3 Security and Audit Requirements (comprehensive expansion with HR audit rules, file permissions, and access matrix)
+
 **Sections Pending Future Passes:**
-- 4.3.2 HR Department Audit Rules (detailed auditd rules for HR folders)
 - 4.5 Network Architecture (detailed VLAN topology, firewall rules)
 - 4.6 Compliance Framework (expand SOX and HIPAA-style controls)
 - 4.7.2 Monitoring Dashboards (Prometheus/Grafana configuration)
 - 4.8 Backup and Recovery (detailed backup procedures, restore testing)
 
-### Next Planned Pass: v1.3
+### Next Planned Pass: v1.4
 **Planned Source Documents:**
-- HR audit requirements documents (auditd-hr-rules.md)
 - Network topology and VLAN specifications
-- Additional compliance control mappings
+- Workstation hardening and deployment configurations
 - Monitoring and alerting configurations
+- Additional workflow and process documents
 
 ---
 
