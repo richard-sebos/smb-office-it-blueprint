@@ -144,7 +144,7 @@ The Managing Partner leads business strategy and operational oversight, requirin
 
 - [executive-security-policy.md](../policy/executive-security-policy.md)
 - [financial-data-access-guidelines.md](../../implementation/security/financial-data-access-guidelines.md)
-- [secure-email-policy.md](../../implementation/security/secure-email-policy.md)
+- [secure-email-policy.md](../security/secure-email-policy.md)
 
 ---
 
