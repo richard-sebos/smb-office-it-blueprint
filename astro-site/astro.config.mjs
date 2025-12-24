@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import starlight from '@astro/starlight';
+import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   base: '/smb-office-it-blueprint/',
