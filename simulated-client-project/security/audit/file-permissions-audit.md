@@ -76,7 +76,7 @@ Applies to:
 - `auditctl` for real-time monitoring
 - `find` + `stat` for bulk checks
 - `csvkit` or spreadsheet for reporting
-- Manual cross-check with [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
+- Manual cross-check with [access-control-matrix.md](../access-control-matrix.md)
 
 ---
 
@@ -119,8 +119,8 @@ samba-tool ntacl get /srv/shares/finance
 
 Compare actual ACLs with:
 
-* [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md)
-* [access-control-matrix.md](../../simulated-client-project/security/access-control-matrix.md)
+* [file-share-permissions.md](../security/file-share-permissions.md)
+* [access-control-matrix.md](../access-control-matrix.md)
 
 ### Step 5: Document All Findings
 
