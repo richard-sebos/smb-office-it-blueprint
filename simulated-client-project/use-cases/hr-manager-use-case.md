@@ -146,7 +146,7 @@ The HR Manager oversees all aspects of the employee lifecycle, including hiring,
 ## 5. Related Files
 
 - [hr-data-retention-policy.md](../policy/hr-data-retention-policy.md)
-- [onboarding-workflow.md](../onboarding/onboarding-workflow.md)
+- [onboarding-workflow.md](../workflow/onboarding-workflow.md)
 - [file-permissions-audit.md](../../implementation/security/file-permissions-audit.md)
 
 ---
