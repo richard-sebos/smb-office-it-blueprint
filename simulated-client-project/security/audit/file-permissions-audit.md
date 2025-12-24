@@ -148,7 +148,7 @@ Compare actual ACLs with:
 
 * [access-control-matrix.md](../access-control-matrix.md)
 * [file-share-permissions.md](../file-share-permissions.md)
-* [auditd-finance-rules.md](auditd-finance-rules.md)
+* [auditd-finance-rules.md](../../audit/auditd-finance-rules.md)
 * [shared-services-policy.md](../../policy/shared-services-policy.md)
 
 ---
