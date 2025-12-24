@@ -140,7 +140,7 @@ Junior Professionals support project-based teams or internal operations. Their a
 
 - [onboarding-workflow.md](../workflows/onboarding-workflow.md)
 - [group-policy-baseline.md](../../implementation/security/group-policy-baseline.md)
-- [access-control-matrix.md](../../security/access-control-matrix.md)
+- [access-control-matrix.md](../security/access-control-matrix.md)
 
 ---
 
