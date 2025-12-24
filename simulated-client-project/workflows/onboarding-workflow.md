@@ -147,7 +147,6 @@ Applies to:
 * [file-share-permissions.md](../security/file-share-permissions.md)
 * [access-control-matrix.md](../security/access-control-matrix.md)
 * [hr-data-retention-policy.md](../policy/hr-data-retention-policy.md)
-* [onboarding-checklist-template.md](./onboarding-checklist-template.md)
 
 ---
 
