@@ -5,7 +5,7 @@
   Author: IT Business Analyst, Linux Admin/Architect
   Created: 2025-12-23
   Updated: 2025-12-23
-  Version: v1.1
+  Version: v1.2
   Status: Draft
   Confidentiality: Internal
   Project Phase: Implementation
@@ -50,7 +50,8 @@
   - [4.6 Compliance Framework](#46-compliance-framework)
   - [4.7 Monitoring and Logging](#47-monitoring-and-logging)
   - [4.8 Backup and Recovery](#48-backup-and-recovery)
-  - [4.9 Implementation Standards](#49-implementation-standards)
+  - [4.9 Operational Policies](#49-operational-policies)
+  - [4.10 Implementation Standards](#410-implementation-standards)
 - [5. Related Files](#5-related-files)
 - [6. Review History](#6-review-history)
 - [7. Departmental Approval Checklist](#7-departmental-approval-checklist)
@@ -86,6 +87,7 @@ This specification is built incrementally, with each pass adding requirements fr
 1. **Audit and logging requirements** (Finance department monitoring)
 2. **Organizational structure** (Departments, roles, reporting hierarchy)
 3. **File share structure** (Directory layout, naming conventions, access control)
+4. **Policy frameworks** (Access control, GPO baseline, data retention, checkout procedures)
 
 ---
 
@@ -613,6 +615,110 @@ guest ok = no
 
 ---
 
+#### 4.2.3 Group Policy Configuration
+
+**Source Document:** `POLICY-GPO-BASELINE-001` (group-policy-baseline.md)
+
+Group Policy Objects (GPOs) are implemented via Samba Active Directory to standardize security configuration, desktop experience, and system behavior across all domain-joined workstations.
+
+##### 4.2.3.1 GPO Strategy
+
+- **Default Domain Policy** applied globally for security and password policy
+- **OU-specific GPOs** for department-specific requirements (HR, Finance, Professional Services)
+- **Group-filtered GPOs** for role-based configuration (e.g., `GG-HR-Staff`)
+- **Version Control:** All GPO configurations stored in encrypted repository
+- **Testing:** All GPO changes tested in lab environment before production deployment
+
+##### 4.2.3.2 Default Domain Policy
+
+Applied to all domain users and computers:
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| Minimum password length | 12 characters | Password complexity baseline |
+| Maximum password age | 90 days | Regular password rotation |
+| Account lockout threshold | 5 failed attempts | Brute-force protection |
+| Lockout duration | 15 minutes | Auto-unlock after lockout |
+| Enforce password history | 10 previous passwords | Prevent password reuse |
+| Require complex passwords | Yes | Mixed character requirements |
+| Allow log on locally | Domain Users, GG-IT-Admins | Workstation access control |
+| Audit logon events | Success and failure | Security event logging |
+| Time synchronization policy | Enabled (via NTP) | Ensure accurate timestamps |
+
+##### 4.2.3.3 Department-Specific GPOs
+
+**HR Department (OU=HR):**
+- **Home Drive Mapping:** `\\files01\hr\$USERNAME` (H: drive)
+- **Desktop Wallpaper:** HR branding and compliance reminders
+- **Shared Drive Access:** Read/Write for `GG-HR-Staff` only
+- **USB Device Control:** Disabled (per security policy)
+- **Screensaver Timeout:** 10 minutes with password lock
+
+**Finance Department (OU=Finance):**
+- **Home Drive Mapping:** `\\files01\finance\$USERNAME` (H: drive)
+- **Shared Drive:** Auto-mount finance reports share (F: drive)
+- **Enhanced Logging:** auditd + GPO event logging enabled
+- **AppLocker:** Disable non-approved applications
+- **USB Device Control:** Completely disabled (highest security)
+- **Password Requirements:** Enhanced (14+ characters, MFA required)
+
+**Professional Services (OU=Professional):**
+- **Shared Templates:** Auto-loaded from `\\files01\templates`
+- **Sudo Access:** Via AD group `GG-Prof-Sudo` (Linux systems)
+- **Project Share Access:** Based on project assignment groups
+- **Printer Access:** Department-specific printer auto-installation
+
+##### 4.2.3.4 Security Settings (GPO-Enforced)
+
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| Interactive logon message | ✅ Enabled | Legal notice banner | Displayed to all users at login |
+| USB storage blocking | ✅ Enabled | udev rules + GPO | Exception: `GG-Exec`, IT Admins |
+| Remote desktop restrictions | ✅ Enabled | RDP access policy | Allowed only for IT/Managers |
+| Disable guest accounts | ✅ Enabled | Domain policy | No guest access permitted |
+| Require screensaver lock | ✅ Enabled | 10-minute timeout | Auto-lock after idle period |
+| Samba log level | 3 | smb.conf + GPO | Audit domain logons |
+| BitLocker enforcement | ✅ Enabled | Finance/HR workstations | Full disk encryption required |
+
+##### 4.2.3.5 Login & UX Settings
+
+**Login Scripts:**
+- **Department Share Mounting:** Automatic at logon based on AD group membership
+- **Printer Installation:** Auto-install department printers via GPO
+- **Template Preloading:** Office templates loaded per department
+
+**Desktop Configuration:**
+- **Login Banner:** Company branding and acceptable use policy
+- **Desktop Shortcuts:** Shared drives, company handbook, IT support portal
+- **Folder Redirection:** Documents folder redirected to user home directory on `files01`
+
+##### 4.2.3.6 USB and Device Control
+
+| Group/Role | USB Access | Control Method | Notes |
+|------------|------------|----------------|-------|
+| `GG-Exec`, IT Admins | ✅ Full Access | Exemption via GPO filter | Executives and IT only |
+| HR/Finance Staff | ❌ Blocked | udev rules + GPO | High-security departments |
+| Interns/Temps | ❌ Blocked | GPO + OU policy | No removable media access |
+| Professional Services | ⚠️ Conditional | Manager approval required | Case-by-case via ticket |
+
+**Technical Implementation:**
+- **Windows Workstations:** GPO device installation restrictions
+- **Linux Workstations:** udev rules + SSSD integration
+- **Enforcement:** Monitored via auditd logs
+
+##### 4.2.3.7 GPO Deployment Plan
+
+| Phase | Task | Tool | Owner | Status |
+|-------|------|------|-------|--------|
+| 1 | Define GPO structure in Samba AD | `samba-tool gpo` | IT AD Architect | Planned |
+| 2 | Map GPOs to OUs and security groups | GPO editor / ADSI | IT Security Analyst | Planned |
+| 3 | Test GPOs in lab environment | Virtual DCs | Linux Admin | Planned |
+| 4 | Deploy to production lab | GPO replication | IT AD Architect | Planned |
+| 5 | Monitor with audit logs | auditd + Samba logs | IT Security Analyst | Planned |
+| 6 | Version control GPO changes | Git-crypt repository | Project Manager | Planned |
+
+---
+
 ### 4.3 Security and Audit Requirements
 
 #### 4.3.1 Audit Logging Framework
@@ -803,6 +909,146 @@ blacklist uas
 
 ---
 
+#### 4.3.4 Audit Log Policy and Retention
+
+**Source Document:** `POLICY-AUDIT-LOG-001` (audit-log-policy.md)
+
+This section defines the collection, retention, protection, and review requirements for system and application audit logs used to support forensic investigation, compliance, and operational security.
+
+##### 4.3.4.1 Log Types and Sources
+
+All systems must generate logs related to security, authentication, access, and system events:
+
+| Log Source | Purpose | Tool/Path | Criticality |
+|------------|---------|-----------|-------------|
+| `auditd` | Security and file access | `/var/log/audit/` | **CRITICAL** |
+| `rsyslog/syslog` | System events | `/var/log/syslog` | HIGH |
+| `samba` | AD and file access | `/var/log/samba/` | **CRITICAL** |
+| `cups` | Print job tracking | `/var/log/cups/` | MEDIUM |
+| `sshd` | Remote access events | `/var/log/auth.log` | **CRITICAL** |
+| `ansible` | Automation run history | `/var/log/ansible/` | HIGH |
+| Application Logs | Custom apps (as required) | App-defined locations | VARIES |
+
+##### 4.3.4.2 Log Retention Requirements
+
+| Log Type | Retention Period | Rotation Tool | Archive Location |
+|----------|------------------|---------------|------------------|
+| `auditd` | 180 days | `logrotate.d` | `/var/log/archive/` |
+| `syslog` | 90 days | `logrotate.d` | `/var/log/archive/` |
+| Samba & CUPS | 90 days | `logrotate.d` | `/var/log/archive/` |
+| SSHD | 180 days | `logrotate.d` | `/var/log/archive/` |
+| Ansible Runs | 60 days | Custom rotation | `/var/log/ansible/archive/` |
+
+**Implementation Details:**
+- Compressed archives stored under `/var/log/archive/`
+- Retention automatically enforced via cron and logrotate
+- Backups of logs included in weekly backup plans
+- Log storage monitored to prevent disk space exhaustion
+
+##### 4.3.4.3 Log Access and Protection
+
+- Logs are **read-only** for non-admin users
+- **Authorized Groups:**
+  - `GG-Security` - IT Security Analyst access
+  - `GG-Audit` - Project Doc Auditor access
+  - `GG-IT-Admins` - Infrastructure administration
+- All access to logs is **logged and reviewed**
+- Logs must be **excluded from user-writable partitions**
+- Logs must **not be stored on removable devices**
+- Logs must **not be modified or deleted** outside of automated retention policies
+
+##### 4.3.4.4 Log Time Synchronization
+
+- All systems **time-synchronized using NTP**
+- **UTC timestamps** used for all log entries
+- NTP server: `infra01.smboffice.local` (internal)
+- External NTP fallback: `pool.ntp.org` (if external access available)
+
+##### 4.3.4.5 Log Review and Monitoring Schedule
+
+| Review Task | Frequency | Reviewer | Tool |
+|-------------|-----------|----------|------|
+| Auditd rule hits (`ausearch`) | Weekly | IT Security Analyst | `ausearch`, custom scripts |
+| Log space usage | Weekly | Linux Admin | `df`, monitoring dashboard |
+| Access to audit logs | Monthly | IT Security Analyst | Samba logs, auditd |
+| Integrity check (via AIDE) | Weekly | Security + Auditor | AIDE file integrity monitoring |
+| Failed login attempts | Daily | IT Security Analyst | Auth log analysis |
+
+##### 4.3.4.6 Policy Enforcement
+
+Violations of audit log policy may result in:
+- Immediate revocation of access to log systems
+- Incident response initiation
+- Notification to HR (if employee-related)
+- Project-wide security review
+
+---
+
+#### 4.3.5 Data Retention Policies
+
+**Source Documents:**
+- `POLICY-HR-RETENTION-001` (hr-data-retention-policy.md)
+- `POLICY-FIN-DATA-ACCESS-001` (financial-data-access-guidelines.md)
+
+##### 4.3.5.1 HR Data Retention Requirements
+
+All HR-related data must be retained according to these schedules to reduce liability, meet legal expectations, and minimize exposure of personal employee information:
+
+| Record Type | Retention Period | Final Action | Storage Location |
+|-------------|------------------|--------------|------------------|
+| Employment Agreements | 7 years post-exit | Secure Delete | `\\files01\hr\personnel` |
+| Payroll Records | 7 years | Archival (Finance) | `\\files01\finance\payroll` |
+| Resumes (Unhired) | 1 year | Auto-purge | `\\files01\hr\recruiting` |
+| Interview Notes | 1 year | Secure Delete | `\\files01\hr\recruiting` |
+| Performance Reviews | 3 years post-exit | Secure Archive | `\\files01\hr\reviews` |
+| Disciplinary Records | 5 years post-exit | Secure Delete | `\\files01\hr\personnel` |
+| Exit Interviews | 3 years | Secure Delete | `\\files01\hr\offboarding` |
+
+##### 4.3.5.2 Secure Deletion Procedures
+
+All deletions of sensitive HR and Finance data must use secure deletion methods:
+
+**Linux/CLI Secure Delete:**
+```bash
+shred -u -n 3 -z <filename>
+```
+
+**Windows Domain Users:**
+- Use "Secure Remove" shortcut (simulated via script)
+- Automated via PowerShell or custom tool
+
+**Audit Tracking:**
+- auditd tracks all delete operations under `/srv/shares/department/hr/*` and `/srv/shares/department/finance/*`
+- Monthly automated retention cleanup via cron
+
+##### 4.3.5.3 Data Backup and Retention Policy
+
+| Backup Type | Frequency | Retention | Location | Encryption |
+|-------------|-----------|-----------|----------|------------|
+| HR Shares | Daily | 30 Days | ZFS snapshots | ✅ Enabled |
+| Offsite Archives | Weekly | 12 Weeks | Encrypted S3 / External | ✅ Required |
+| Payroll Data | Daily | Per Finance Policy (7 years) | Finance share backup | ✅ Required |
+| Audit Logs | Daily | 180 days | `/var/log/archive/` | ✅ Enabled |
+
+**Backup Tool:** `restic` (encrypted backup vault)
+
+**Access Restrictions:**
+- Linux Admins (backup restoration only)
+- HR Manager (approval required for restoration)
+- Finance Manager (payroll data restoration approval)
+
+##### 4.3.5.4 Roles and Responsibilities (Data Retention)
+
+| Role | Responsibility |
+|------|----------------|
+| HR Manager | Enforces HR retention, signs off on deletions |
+| Finance Manager | Enforces financial retention, coordinates with HR on payroll |
+| IT Security Analyst | Audits logs and deletion compliance |
+| Linux Admin | Maintains automated cleanup and backups |
+| Project Doc Auditor | Ensures policy documents are aligned |
+
+---
+
 ### 4.4 Departmental Access Controls
 
 #### 4.4.1 Finance Department Access Matrix
@@ -848,6 +1094,111 @@ blacklist uas
 - **Multi-Department Support:** Access to shared resources across departments
 - **Limited Sensitive Access:** No access to Finance or HR personnel data
 - **Template Management:** Can modify shared templates, read HR form templates
+
+---
+
+#### 4.4.4 Access Control Principles and Policies
+
+**Source Documents:**
+- `POLICY-USER-ACCESS-001` (user-access-policy.md)
+- `POLICY-FIN-DATA-ACCESS-001` (financial-data-access-guidelines.md)
+- `POLICY-CLIENT-ACCESS-001` (client-access-policy.md)
+
+##### 4.4.4.1 Core Access Management Principles
+
+All user access to systems, file shares, and resources follows these principles:
+
+1. **Least Privilege:** Access granted only to what is strictly needed for job function
+2. **Role-Based Access Control (RBAC):** Access mapped to employee's role and department
+3. **Auditable:** All access changes must be logged and traceable
+4. **Revocable:** All access can be removed promptly upon exit or role change
+5. **Time-Bound:** Interns, temps, and contractors have automatic expiration timers
+
+##### 4.4.4.2 User Account Lifecycle Management
+
+| Stage | Action | Timeline | Workflow Document |
+|-------|--------|----------|-------------------|
+| **Onboarding** | Account created, groups assigned | Day 1 | `onboarding-workflow.md` |
+| **Role Transfer** | Access re-evaluated, groups updated | Within 24 hours | IT change request |
+| **Termination** | AD account disabled, access revoked | Within 2 hours | Offboarding checklist |
+| **Temp/Intern Expiry** | Auto-disable after access period | Automatic | GPO + scheduled task |
+| **Quarterly Audit** | Access rights reviewed | Every 90 days | IT Security Analyst |
+
+##### 4.4.4.3 Financial Data Access Authorization
+
+| Access Classification | Description | Required Approval | Access Duration |
+|----------------------|-------------|-------------------|-----------------|
+| **Public Finance Data** | Internal reports for exec review | Finance Manager | Permanent |
+| **Departmental Data** | Working files, forecasts, AP/AR | Finance Manager | Permanent |
+| **Sensitive Financials** | Payroll, client billing, budgets | Finance Manager + IT Security | Permanent (with quarterly review) |
+| **Audit Logs** | Access logs, auditd reports | IT Security Analyst only | Permanent |
+
+**Access Request Process (Finance):**
+1. User submits request to manager and IT Security via ticket/email
+2. Finance Manager approval required for all elevated access
+3. IT AD Architect grants membership to appropriate AD security group
+4. Access logs updated (manual or Ansible-integrated)
+5. Review every 90 days as part of access audit cycle
+
+##### 4.4.4.4 Client Access Policy (External Users)
+
+External clients requiring temporary access to shared files or portals must follow this policy:
+
+**Approved Access Types:**
+| Access Type | Description | Default Expiry | Max Expiry |
+|-------------|-------------|----------------|------------|
+| Shared File Access | Read/download from approved shares | 7 days | 30 days |
+| Secure Folder Upload | Write access for document submission | 3 days | 7 days |
+| Portal Login | Client-specific portal credentials | 14 days | 60 days |
+
+**Client Access Workflow:**
+1. **Request:** Internal staff (relationship owner) initiates request
+2. **Approval:** Department Manager **AND** IT Security Analyst approval required
+3. **Provision:** IT or automation script creates access, logged in `client-access.log`
+4. **Expiration:** Auto-disabled at expiry; re-request required for extension
+
+**Authentication Requirements:**
+- Email-based tokens (preferred for portals)
+- Temporary AD-linked account with strong password
+- MFA required for high-sensitivity data (e.g., finance files)
+- Email domain must match verified client identity
+
+**File Sharing Rules for Clients:**
+- Files stored in designated client folders: `\\files01\Clients\<ClientName>`
+- Default permissions: Clients → Read, Internal Staff → Full Control
+- Confidential docs: Encrypted ZIP or Nextcloud link with separate password delivery (SMS/phone)
+- All client access logged via auditd and Samba logs
+- Monthly review by IT Security required
+
+##### 4.4.4.5 Printer Access Policy
+
+**Source Document:** `POLICY-PRINT-ACCESS-001` (printer-access-policy.md)
+
+Printer access is controlled by AD security group membership. No manual printer installation permitted.
+
+**Printer-to-Group Mapping:**
+| Printer Name | AD Group | Access Level | Notes |
+|--------------|----------|--------------|-------|
+| `hr-printer-01` | `GG-Print-HR` | Print Only | HR department only |
+| `finance-print-01` | `GG-Print-Finance` | Print/Scan | Finance department, enhanced logging |
+| `common-bw-01` | `GG-Print-AllStaff` | Print Only | General office use |
+| `exec-color-01` | `GG-Print-Executive` | Print/Scan/Color | Executive team only |
+
+**Printer Deployment:**
+- Auto-deployed via Group Policy Preferences or Ansible
+- Refreshed at user logon via SSSD (Linux) or GPO (Windows)
+- No local admin rights to manually add/remove printers
+
+**Printer Logging:**
+- CUPS logs enabled: `/var/log/cups/page_log`
+- Logs include: username, file name, timestamp, page count
+- Retention: 180 days
+- Quarterly review by IT Security Analyst
+
+**Special Cases:**
+- Temporary staff: Added to printer groups via onboarding workflow
+- Color printing: Requires documented business case approval
+- Large print jobs: Routed to department-managed queue
 
 ---
 
@@ -1000,9 +1351,178 @@ input(type="imtcp" port="514")
 
 ---
 
-### 4.9 Implementation Standards
+### 4.9 Operational Policies
 
-#### 4.9.1 Ansible Automation Requirements
+This section consolidates operational policies governing day-to-day access, infrastructure usage, and administrative procedures.
+
+#### 4.9.1 Administrative Access Checkout Policy
+
+**Source Document:** `POLICY-ADMIN-CHECKOUT-001` (admin-checkout-policy.md)
+
+This policy enforces controlled and auditable access to sensitive data and systems, limiting risk through time-bound, logged administrative access.
+
+##### 4.9.1.1 Policy Scope
+
+Administrative access checkout applies to:
+- Access to **executive-level file shares**
+- Access to **finance or HR data** (by non-department staff)
+- Changes to **Active Directory groups**
+- Temporary **elevated sudo or root permissions**
+- Use of **privileged Ansible roles**
+- Access to **client deliverables**
+- Manual overrides or backdoor access for troubleshooting
+
+##### 4.9.1.2 Access Categories
+
+| Category | Examples | Max Duration |
+|----------|----------|--------------|
+| Admin File Access | Executive folders, finance exports | 4 hours |
+| Domain-Level Changes | AD group edits, user moves | 4 hours |
+| Security Configurations | auditd, SELinux, AIDE config changes | 4 hours |
+| Privileged Systems | `/etc/samba/*`, Ansible vault credentials | 4 hours |
+| Emergency Break-Glass Access | Root shell on DCs or key servers | 1 hour (with post-access review) |
+| Client File Review | Temporary access to client deliverables | 2 hours |
+
+##### 4.9.1.3 Checkout Workflow
+
+1. **Request Initiation**
+   - Submitted via secure form or IT ticket by authorized user
+   - Must include: reason, systems/data needed, duration requested
+
+2. **Approval**
+   - Reviewed and approved by IT Security Analyst or Department Head
+   - Finance/HR data requires department manager approval
+
+3. **Access Granted**
+   - Limited by scope, system, and time window
+   - Logged in `admin-checkout.log` (encrypted repository)
+   - Access credentials or group membership granted
+
+4. **Audit Flagging**
+   - Access tagged and monitored by `auditd`
+   - Real-time alerts for sensitive operations
+
+5. **Access Revoked Automatically**
+   - Revoked by Ansible job or cron script at expiration time
+   - No manual intervention required for revocation
+
+> **Emergency Access:** Requires post-access review and documentation within 24 hours
+
+##### 4.9.1.4 Required Log Fields
+
+All administrative access checkout must log:
+- Username (requestor)
+- Access type (category from table above)
+- Reason for access (business justification)
+- Approver name
+- Start timestamp
+- End timestamp (actual)
+- Systems or folders touched
+- Actions performed (high-level summary)
+
+**Log Locations:**
+- `admin-checkout.log` (encrypted Git repository)
+- `auditd` event logs (system-level)
+- AD Group modification history (if applicable)
+
+##### 4.9.1.5 Violations and Enforcement
+
+- Any access without approval is a **security violation**
+- IT Security reserves the right to **immediately revoke access**
+- Repeat violations may result in disciplinary action
+- All violations logged and reviewed by Project Doc Auditor
+
+---
+
+#### 4.9.2 Shared Services Policy
+
+**Source Document:** `POLICY-INFRA-SSP-001` (shared-services-policy.md)
+
+##### 4.9.2.1 Scope of Shared Services
+
+Centralized IT services supporting multiple departments:
+
+| Service | Hostname | Protocol/Stack | Purpose |
+|---------|----------|----------------|---------|
+| File Services | `files01` | Samba / SMB | Department file shares |
+| Print Services | `print01` | CUPS / IPP / Samba | Shared network printers (AD-aware) |
+| DNS | `dc01`, `dc02` | BIND / Samba Internal DNS | AD and name resolution |
+| DHCP | `infra01` | ISC-DHCP | Client IP assignment (optional) |
+| LDAP/Kerberos | `dc01`, `dc02` | Samba 4 (AD compatible) | Authentication |
+| NTP | `infra01` | chrony | Time synchronization for domain |
+
+##### 4.9.2.2 Usage Guidelines
+
+- **File shares:** Business content only; no personal or unlicensed files
+- **Shared printers:** Departmental use only; color printing restricted by GPO
+- **DNS/DHCP modification:** IT Admin rights required
+- **NTP configuration:** All clients must use internal servers
+- **Obsolete content cleanup:** Departments responsible for regular cleanup
+
+##### 4.9.2.3 Maintenance and Updates
+
+- **Owners:** Linux Admin and IT AD Architect
+- **Patching Schedule:** Bi-weekly unless critical vulnerabilities emerge
+- **Monitoring:** `checkmk` or `Prometheus` for uptime and anomalies
+- **Change Management:** All infrastructure changes via IT ticket
+
+##### 4.9.2.4 Incident Handling
+
+- **Suspected Misuse:** Report to IT Security Analyst
+- **Data Recovery:** Best-effort using nightly ZFS snapshots
+- **Printing Abuse:** Account review for wasteful or restricted content
+- **Log Review:** Monthly review in response to any breach or data access concern
+
+---
+
+#### 4.9.3 Executive Security Requirements
+
+**Source Document:** `POLICY-SEC-EXEC-001` (executive-security-policy.md)
+
+##### 4.9.3.1 Executive Workstation Requirements
+
+| Control | Requirement | Enforcement |
+|---------|-------------|-------------|
+| Endpoint OS | Hardened Oracle Linux 9 (GUI) | Ansible deployment |
+| Local Account | No local root login | PAM configuration |
+| Authentication | AD-integrated with MFA | SSSD + 2FA token |
+| Drive Encryption | Full Disk Encryption (LUKS) | Automated via kickstart |
+| Removable Media | Disabled by default | udev rules + GPO |
+| Screensaver Timeout | Auto-lock after 5 minutes idle | GPO enforcement |
+| Updates | Weekly via secured internal repo | Ansible automation |
+
+##### 4.9.3.2 Executive Data Access and Classification
+
+| Data Type | Access Method | Access Level |
+|-----------|---------------|--------------|
+| Financial Summaries | Encrypted share (`\\files01\executive\finance`) | Read-Only |
+| HR Performance Reports | Encrypted share (`\\files01\executive\hr`) | Read-Only (summary only) |
+| Strategic Documents | Internal Git repo (git-crypt) | Read/Write |
+| Client Billing Overview | Encrypted folder | Read-Only |
+
+##### 4.9.3.3 Executive Communication Policy
+
+- All outbound executive emails must use **corporate domain**
+- Executive emails must be **signed and encrypted** (GPG or S/MIME)
+- No use of personal email for work-related tasks
+- Messaging via **approved encrypted platform** (Signal / Mattermost E2EE)
+- External document sharing **prohibited** unless routed through IT-reviewed process
+
+##### 4.9.3.4 Executive Audit and Monitoring
+
+| Audit Feature | Status | Review Frequency |
+|---------------|--------|------------------|
+| File Access Logs | ✅ Enabled (auditd) | Real-time monitoring |
+| Login Attempt Logging | ✅ Enabled | Daily review |
+| sudo / privilege escalation | ✅ Enabled | Immediate alert |
+| Executive Share Changes | ✅ Enabled | Logged and rotated |
+| Email Encryption Failure | ✅ Enabled | Weekly audit |
+
+---
+
+### 4.10 Implementation Standards
+
+#### 4.10.1 Ansible Automation Requirements
 
 **Playbook Organization:**
 
@@ -1037,7 +1557,7 @@ ansible/
 - Document all variables in role README files
 - Use Ansible Vault for secrets
 
-#### 4.9.2 Documentation Standards
+#### 4.10.2 Documentation Standards
 
 **All documentation must follow:** `standards/markdown.md`
 
@@ -1048,7 +1568,7 @@ ansible/
 - Review History table
 - Departmental Approval Checklist
 
-#### 4.9.3 Testing and Validation
+#### 4.10.3 Testing and Validation
 
 **Test Levels:**
 
@@ -1083,6 +1603,19 @@ ansible/
 **Audit and Security:**
 - [auditd-finance-rules.md](../../simulated-client-project/audit/auditd-finance-rules.md) - `SECURITY-AUDITD-FIN-001`
 
+**Policy Documents:**
+- [user-access-policy.md](../../simulated-client-project/policy/user-access-policy.md) - `POLICY-USER-ACCESS-001`
+- [group-policy-baseline.md](../../simulated-client-project/policy/group-policy-baseline.md) - `POLICY-GPO-BASELINE-001`
+- [admin-checkout-policy.md](../../simulated-client-project/policy/admin-checkout-policy.md) - `POLICY-ADMIN-CHECKOUT-001`
+- [audit-log-policy.md](../../simulated-client-project/policy/security/audit-log-policy.md) - `POLICY-AUDIT-LOG-001`
+- [hr-data-retention-policy.md](../../simulated-client-project/policy/hr-data-retention-policy.md) - `POLICY-HR-RETENTION-001`
+- [financial-data-access-guidelines.md](../../simulated-client-project/policy/finance/financial-data-access-guidelines.md) - `POLICY-FIN-DATA-ACCESS-001`
+- [executive-security-policy.md](../../simulated-client-project/policy/executive-security-policy.md) - `POLICY-SEC-EXEC-001`
+- [client-access-policy.md](../../simulated-client-project/policy/client-access-policy.md) - `POLICY-CLIENT-ACCESS-001`
+- [printer-access-policy.md](../../simulated-client-project/policy/printer-access-policy.md) - `POLICY-PRINT-ACCESS-001`
+- [shared-services-policy.md](../../simulated-client-project/policy/shared-services-policy.md) - `POLICY-INFRA-SSP-001`
+- [finance-department-policy.md](../../simulated-client-project/policy/finance-department-policy.md) - `POLICY-FINANCE-001`
+
 **Standards:**
 - [markdown.md](../../standards/markdown.md)
 
@@ -1102,6 +1635,7 @@ ansible/
 |---------|------|----------|-------|
 | v1.0 | 2025-12-23 | IT Business Analyst | Initial system specification created from audit requirements (Finance) |
 | v1.1 | 2025-12-23 | IT Business Analyst, SMB Analyst | Added organizational structure and file share structure from org documents |
+| v1.2 | 2025-12-23 | IT Security Analyst, IT Business Analyst | Added policy frameworks: GPO baseline, access control, data retention, administrative checkout procedures |
 
 ---
 
@@ -1135,7 +1669,7 @@ ansible/
 - 4.6.1 SOX-Style Controls (Finance)
 - 4.7.1 Log Aggregation Architecture
 
-### Pass v1.1 (Current)
+### Pass v1.1
 **Source Documents Incorporated:**
 - `ORG-STRUCTURE-001` - Simulated organization chart
 - `INFRA-FS-STRUCTURE-001` - File share structure and layout
@@ -1157,19 +1691,70 @@ ansible/
 - 4.0.6 Security group mapping (comprehensive department groupings)
 - 4.2.2.8 Department-to-share mapping
 
+### Pass v1.2 (Current)
+**Source Documents Incorporated:**
+- `POLICY-USER-ACCESS-001` - User access control policy
+- `POLICY-GPO-BASELINE-001` - Group policy baseline
+- `POLICY-ADMIN-CHECKOUT-001` - Administrative access checkout policy
+- `POLICY-AUDIT-LOG-001` - Audit log policy and retention
+- `POLICY-HR-RETENTION-001` - HR data retention policy
+- `POLICY-FIN-DATA-ACCESS-001` - Financial data access guidelines
+- `POLICY-SEC-EXEC-001` - Executive security policy
+- `POLICY-CLIENT-ACCESS-001` - Client access policy
+- `POLICY-PRINT-ACCESS-001` - Printer access policy
+- `POLICY-INFRA-SSP-001` - Shared services policy
+- `POLICY-FINANCE-001` - Finance department policy
+
+**Sections Completed:**
+- **4.2.3 Group Policy Configuration** (NEW)
+  - GPO strategy and deployment plan
+  - Default Domain Policy settings
+  - Department-specific GPOs (HR, Finance, Professional Services)
+  - Security settings (USB control, screensaver, device restrictions)
+  - Login and UX settings
+  - USB and device control matrix
+- **4.3.4 Audit Log Policy and Retention** (NEW)
+  - Log types and sources
+  - Retention requirements
+  - Log access and protection
+  - Time synchronization requirements
+  - Review and monitoring schedule
+- **4.3.5 Data Retention Policies** (NEW)
+  - HR data retention schedules
+  - Secure deletion procedures
+  - Data backup and retention policy
+  - Roles and responsibilities
+- **4.4.4 Access Control Principles and Policies** (NEW)
+  - Core access management principles
+  - User account lifecycle management
+  - Financial data access authorization
+  - Client access policy (external users)
+  - Printer access policy
+- **4.9 Operational Policies** (NEW SECTION)
+  - 4.9.1 Administrative Access Checkout Policy
+  - 4.9.2 Shared Services Policy
+  - 4.9.3 Executive Security Requirements
+
+**Sections Enhanced:**
+- 4.4 Departmental Access Controls (added comprehensive policy framework)
+
+**Sections Renumbered:**
+- Previous 4.9 Implementation Standards → 4.10 Implementation Standards
+  - All subsections renumbered from 4.9.x to 4.10.x
+
 **Sections Pending Future Passes:**
-- 4.2.1 Active Directory Structure (detailed group policies, GPO settings)
-- 4.3.2 HR Department Audit Rules
+- 4.3.2 HR Department Audit Rules (detailed auditd rules for HR folders)
 - 4.5 Network Architecture (detailed VLAN topology, firewall rules)
-- 4.7.2 Monitoring Dashboards
+- 4.6 Compliance Framework (expand SOX and HIPAA-style controls)
+- 4.7.2 Monitoring Dashboards (Prometheus/Grafana configuration)
 - 4.8 Backup and Recovery (detailed backup procedures, restore testing)
 
-### Next Planned Pass: v1.2
+### Next Planned Pass: v1.3
 **Planned Source Documents:**
-- HR audit requirements documents
+- HR audit requirements documents (auditd-hr-rules.md)
 - Network topology and VLAN specifications
-- AD GPO design documents
-- Backup and recovery procedures
+- Additional compliance control mappings
+- Monitoring and alerting configurations
 
 ---
 
