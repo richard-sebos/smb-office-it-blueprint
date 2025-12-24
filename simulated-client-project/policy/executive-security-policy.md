@@ -149,7 +149,7 @@ Executive workstations, documents, and communications often contain financial su
 
 - [managing-partner-use-case.md](../use-cases/managing-partner-use-case.md)
 - [secure-email-policy.md](../security/secure-email-policy.md)
-- [access-control-matrix.md](../../implementation/security/access-control-matrix.md)
+- [access-control-matrix.md](../security/access-control-matrix.md)
 
 ---
 
