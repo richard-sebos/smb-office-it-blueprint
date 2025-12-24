@@ -141,11 +141,10 @@ Violations include:
 
 ## 9. Related Documents
 
-- [onboarding-workflow.md](../hr/onboarding-workflow.md)
-- [admin-checkout-policy.md](admin-checkout-policy.md)
-- [user-profile-definitions.md](user-profile-definitions.md)
+- [onboarding-workflow.md](../workflow/onboarding-workflow.md)
+- [admin-checkout-policy.md](../policy/admin-checkout-policy.md)
 - [access-control-matrix.md](access-control-matrix.md)
-- [audit-log-policy.md](audit-log-policy.md)
+- [audit-log-policy.md](../audit/audit-log-policy.md)
 
 ---
 
