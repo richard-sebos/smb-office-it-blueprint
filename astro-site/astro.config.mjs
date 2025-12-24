@@ -1,33 +1,19 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
+import starlight from '@astro/starlight';
 
-// https://astro.build/config
 export default defineConfig({
-  base: '/smb-office-it-blueprint/', // 👈 Required for GitHub Pages
-
+  base: '/smb-office-it-blueprint/',
   integrations: [
     starlight({
-      title: 'My Docs',
-      social: [
-        {
-          icon: 'github',
-          label: 'GitHub',
-          href: 'https://github.com/withastro/starlight'
-        }
-      ],
+      title: 'SMB IT Blueprint Docs',
+      route: '/docs',
       sidebar: [
         {
-          label: 'Guides',
-          items: [
-            { label: 'Example Guide', slug: 'guides/example' }
-          ]
+          label: 'Start Here',
+          items: [{ label: 'Overview', slug: 'index' }],
         },
-        {
-          label: 'Reference',
-          autogenerate: { directory: 'reference' }
-        }
-      ]
-    })
-  ]
+      ],
+    }),
+  ],
 });
+
