@@ -3,10 +3,9 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   base: '/smb-office-it-blueprint/',
-
   integrations: [
     starlight({
-      title: 'SMB IT Blueprint Docs',
+      title: 'SMB Office IT Blueprint',
       social: [
         {
           icon: 'github',
@@ -16,9 +15,9 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: 'Guides',
+          label: 'Getting Started',
           items: [
-            { label: 'Example Guide', slug: 'guides/example' }
+            { label: 'Overview', slug: 'index' }
           ]
         },
         {
