@@ -155,7 +155,7 @@ Applies to:
 
 - [user-access-policy.md](user-access-policy.md)
 - [admin-checkout-policy.md](admin-checkout-policy.md)
-- [auditd-finance-rules.md](../security/auditd-finance-rules.md)
+- [auditd-finance-rules.md](../audit/auditd-finance-rules.md)
 - [access-control-matrix.md](../security/access-control-matrix.md)
 - [file-share-permissions.md](../security/file-share-permissions.md)
 
