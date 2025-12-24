@@ -139,7 +139,7 @@ Backups are encrypted using **restic** and stored in the **encrypted backup vaul
 ## 9. Related Documents
 
 - [file-share-permissions.md](../security/file-share-permissions.md)
-- [auditd-hr-rules.md](../../implementation/security/auditd/auditd-hr-rules.md)
+- [auditd-hr-rules.md](../security/auditd/auditd-hr-rules.md)
 - [shared-services-policy.md](./shared-services-policy.md)
 - [access-control-matrix.md](../security/access-control-matrix.md)
 
