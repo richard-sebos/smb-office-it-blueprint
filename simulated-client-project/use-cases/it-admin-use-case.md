@@ -156,7 +156,7 @@ Certain systems and data require a **time-limited, auditable checkout** process 
 ## 5. Related Files
 
 - [admin-checkout-policy.md](../policy/admin-checkout-policy.md)
-- [group-policy-baseline.md](../../implementation/ad/group-policy-baseline.md)
+- [group-policy-baseline.md](../policy/group-policy-baseline.md)
 - [ansible/roles/domain-controller/tasks/main.yml](../../implementation/ansible/roles/domain-controller/tasks/main.yml)
 
 ---
