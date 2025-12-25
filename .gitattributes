@@ -1,1 +1,4 @@
 articles/** filter=git-crypt diff=git-crypt
+implementation/agents** filter=git-crypt diff=git-crypt
+implementation/ansible/** filter=git-crypt diff=git-crypt
+docs/system-specs/** filter=git-crypt diff=git-crypt
