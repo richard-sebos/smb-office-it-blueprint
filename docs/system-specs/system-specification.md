@@ -89,6 +89,7 @@ This specification is built incrementally, with each pass adding requirements fr
 3. **File share structure** (Directory layout, naming conventions, access control)
 4. **Policy frameworks** (Access control, GPO baseline, data retention, checkout procedures)
 5. **Security frameworks** (HR audit rules, access control matrix, file permissions, secure communications)
+6. **Operational workflows** (Employee onboarding, intern provisioning, project onboarding templates)
 
 ---
 
@@ -1871,6 +1872,282 @@ Centralized IT services supporting multiple departments:
 
 ---
 
+#### 4.9.4 Employee Onboarding Workflows
+
+**Source Documents:**
+- `WORKFLOW-HR-ONBOARDING-001` (onboarding-workflow.md)
+- `CHECKLIST-HR-INTERN-001` (intern-onboarding-checklist.md)
+- `TEMPLATE-ONBOARDING-PROJECT-001` (project-onboarding-template.md)
+
+This section defines the structured onboarding processes for new employees, ensuring correct accounts, equipment, workspace, and access levels are provisioned before Day 1.
+
+##### 4.9.4.1 Onboarding Scope
+
+Applies to:
+- All new employees (full-time, part-time)
+- Interns and temporary contractors
+- Remote and in-office hires
+- Initial provisioning period (first 14 days)
+
+##### 4.9.4.2 Pre-Start Checklist
+
+All onboarding tasks must be completed before the employee's first day:
+
+| Task | Owner | Due By | Priority |
+|------|-------|--------|----------|
+| Offer letter signed | HR | -7 days | **CRITICAL** |
+| Start date confirmed | HR | -7 days | **CRITICAL** |
+| AD user account created | IT Admin | -5 days | **CRITICAL** |
+| Workstation assigned/prepped | IT Admin | -3 days | **HIGH** |
+| Share & group access mapped | IT + HR | -2 days | **HIGH** |
+| Email account configured | IT Admin | -2 days | **HIGH** |
+| Office keycard / security badge | HR / Facilities | -1 day | MEDIUM |
+| Welcome letter & HR packet | HR | -1 day | MEDIUM |
+
+##### 4.9.4.3 Onboarding Workflow
+
+```text
+┌─────────────────────────────┐
+│ HR: New Hire Form Submitted │
+└──────────┬──────────────────┘
+           ↓
+┌─────────────────────────────────────────┐
+│ IT: User Created in AD + Email Setup    │
+│ - OU placement based on department      │
+│ - Security groups assigned               │
+│ - Home directory created                 │
+└──────────┬──────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────┐
+│ IT: Assign Group Access + Permissions   │
+│ - Departmental file shares               │
+│ - Printer access groups                  │
+│ - Application access (if applicable)     │
+└──────────┬──────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────┐
+│ IT: Configure Workstation + Login Test  │
+│ - Domain join verification               │
+│ - GPO application check                  │
+│ - Test login with temporary password     │
+└──────────┬──────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────┐
+│ HR: Orientation Scheduled                │
+│ - First day agenda                       │
+│ - Department introductions               │
+│ - Policy training                        │
+└──────────┬──────────────────────────────┘
+           ↓
+┌─────────────────────────────────────────┐
+│ New Hire: Day 1 Checklist Completed     │
+└─────────────────────────────────────────┘
+```
+
+##### 4.9.4.4 Departmental Responsibilities
+
+**HR Department:**
+- Collects new hire data and completes onboarding form
+- Coordinates with IT for account provisioning
+- Delivers policy training and employee handbook
+- Schedules orientation and first-day agenda
+- Maintains onboarding documentation
+
+**IT Department:**
+- Creates AD and email accounts in appropriate OUs
+- Assigns role-based groups (Finance, HR, Professional Services, Shared Services)
+- Prepares workstation with standard image or VDI access
+- Tests login, mapped drives, and printer access
+- Provides IT orientation (password policy, MFA setup, VPN if needed)
+
+**Hiring Manager:**
+- Defines role-based access requirements
+- Reviews first-day readiness checklist
+- Mentors new hire through first week
+- Provides department-specific onboarding
+
+##### 4.9.4.5 Access Provisioning by Role
+
+| Role | Default AD Groups | Shared Folders | Workstation | Notes |
+|------|-------------------|----------------|-------------|-------|
+| Finance Manager | `GG-Finance-Staff`, `GG-Exec` | `\\files01\department\finance` | `finance-ws01` | Payroll and reporting access, LUKS encrypted |
+| HR Manager | `GG-HR-Staff`, `GG-Exec` | `\\files01\department\hr` | `hr-ws01` | Personnel records access, hardened profile |
+| Admin Assistant | `GG-Company-Docs`, `GG-Shared-Services` | `\\files01\shared\company` | `admin-ws01` | Calendar + support duties |
+| Junior Professional | `GG-Project-Staff` | `\\files01\projects\deliverables` | `prof-ws##` | Assigned per project |
+| Senior Professional | `GG-Project-Staff`, `GG-Project-Leads` | `\\files01\projects\*` | `prof-ws##` | Project lead permissions |
+| Intern / Temp | `GG-Interns` | `\\files01\interns\working` | `intern-ws##` | **Time-limited access (auto expire 90 days)** |
+
+> 🔐 For access to **client files** or **executive content**, an **IT Admin checkout process** is required (see section 4.9.1)
+
+##### 4.9.4.6 First-Day IT Readiness Verification
+
+All items must be verified before employee arrival:
+
+| Task | Verification Method | Responsible | Status Check |
+|------|---------------------|-------------|--------------|
+| Login to workstation | IT tests with temp password | IT Support | Day -1 |
+| Test mapped network drives | Verify drive letters appear | IT Support | Day -1 |
+| Access to email + calendar | Send test email | IT Support | Day -1 |
+| Shared printer access | Test print job | IT Support | Day -1 |
+| VPN or remote access setup | Remote login test (if applicable) | IT Support | Day -1 |
+| Password policy & MFA reviewed | Orientation materials prepared | HR / IT | Day -1 |
+
+**Day 1 Checklist for New Hire:**
+1. Login successfully with temporary password
+2. Change password to meet complexity requirements
+3. Set up MFA (if role requires)
+4. Verify access to department share
+5. Test email send/receive
+6. Test printer access
+7. Complete HR orientation
+8. Acknowledge acceptable use policy
+
+##### 4.9.4.7 Intern and Temporary Staff Onboarding
+
+**Source Document:** `CHECKLIST-HR-INTERN-001` (intern-onboarding-checklist.md)
+
+Interns and temporary staff have additional requirements:
+
+**Special Provisions:**
+- AD account created under `OU=Interns`
+- Automatic account expiration set (maximum 90 days)
+- Limited access scope (no Finance/HR confidential data)
+- Enhanced audit logging enabled
+- Exit checklist automatically triggered 7 days before expiration
+
+**Intern-Specific Provisioning Tasks:**
+
+| Item | Configuration | Enforcement |
+|------|---------------|-------------|
+| Account OU | `CN=InternName,OU=Interns,OU=Users,DC=smboffice,DC=local` | Required |
+| Primary Group | `GG-Interns` | Required |
+| File Share | `/srv/shares/interns/working` (Read/Write) | ACL enforced |
+| Email/Calendar | Full access | Standard |
+| VPN Access | If needed, time-limited | Optional |
+| Expiration Policy | 90 days maximum | **Auto-enforced via GPO + scheduled task** |
+| Account Notification | Alert sent to HR 7 days before expiration | Automated email |
+
+**Intern Orientation Tasks (HR):**
+
+| Item | Purpose |
+|------|---------|
+| Review intern responsibilities | Scope of work, expectations |
+| Walkthrough of shared folder structure | Where to save work, templates |
+| Code of conduct acknowledged | Signed acknowledgment form |
+| Time tracking process explained | Timesheet submission |
+| End-of-internship feedback form sent | Scheduled for final week |
+| Exit checklist prepared | Account deprovisioning steps |
+
+**Security Notes for Interns:**
+- ⚠️ Access is **temporary and automatically expires**
+- ❌ **No access to confidential HR or Finance data**
+- 🔍 **Subject to enhanced audit logging via auditd**
+- ⚡ **Violation of access policy results in immediate deactivation**
+
+##### 4.9.4.8 Project Onboarding Template
+
+**Source Document:** `TEMPLATE-ONBOARDING-PROJECT-001` (project-onboarding-template.md)
+
+For team members joining specific projects, lab phases, or submodules:
+
+**Project Onboarding Elements:**
+
+| Element | Description |
+|---------|-------------|
+| Project Overview | Name, phase/subsystem, department, primary contacts |
+| Objectives | Purpose, contribution areas, first tasks |
+| Required Reading | Project docs, org chart, access policies, use cases, security requirements |
+| Access Checklist | Git repo, encrypted folders, Samba AD, VPN, email |
+| Tools and Systems | Git+git-crypt, Proxmox, Ansible, Samba AD, Markdown docs |
+| Assigned Agent Roles | Primary/secondary owners, supporting AI agents |
+| Milestones & Check-ins | Access confirmed, first task completed, review submitted |
+
+**Standard Project Access Checklist:**
+
+| Item | Required? | Notes |
+|------|-----------|-------|
+| Git Repository Access | ✅ | SSH key required |
+| Encrypted Folder Access | ✅ (if needed) | Request to Project Manager via ticket |
+| Samba AD Account | ✅ | `smboffice.local` domain |
+| VPN or Remote Lab Access | ✅ | Check onboarding instructions |
+| Email (internal/project) | Optional | For document reviews or GitHub notifications |
+
+##### 4.9.4.9 Onboarding Automation Requirements
+
+**Ansible Integration Points:**
+
+The onboarding workflow should be partially automated using Ansible playbooks:
+
+```yaml
+# Example: ansible/playbooks/onboard-user.yml
+---
+- name: Onboard New Employee
+  hosts: dc01
+  vars:
+    employee_name: "{{ employee_firstname }} {{ employee_lastname }}"
+    employee_username: "{{ employee_firstname[0] }}{{ employee_lastname }}"
+    employee_department: "{{ department }}"  # Finance, HR, Professional, etc.
+    employee_role: "{{ role }}"  # Manager, Staff, Intern
+    expiration_date: "{{ expiration | default(omit) }}"  # For interns only
+
+  tasks:
+    - name: Create AD user account
+      samba_user:
+        name: "{{ employee_username }}"
+        firstname: "{{ employee_firstname }}"
+        surname: "{{ employee_lastname }}"
+        ou: "OU={{ employee_department }},OU=Users,DC=smboffice,DC=local"
+        password: "{{ temp_password }}"
+        state: present
+
+    - name: Assign to department groups
+      samba_group_member:
+        name: "{{ item }}"
+        members: "{{ employee_username }}"
+        state: present
+      loop: "{{ department_groups[employee_department] }}"
+
+    - name: Set account expiration (interns only)
+      when: employee_role == "Intern"
+      samba_user:
+        name: "{{ employee_username }}"
+        expiration_date: "{{ expiration_date }}"
+```
+
+**Automation Scope:**
+- ✅ AD account creation
+- ✅ Group membership assignment
+- ✅ Home directory creation
+- ✅ Email mailbox provisioning
+- ✅ Account expiration (interns)
+- ⚠️ Workstation assignment (semi-automated - requires manual hardware prep)
+- ❌ HR orientation (manual process)
+
+##### 4.9.4.10 Offboarding Workflow
+
+While not detailed in source documents, the onboarding workflow implies a corresponding offboarding process:
+
+**Immediate Actions (Termination Day):**
+1. AD account disabled (not deleted)
+2. Email forwarding configured (if applicable)
+3. File share access revoked
+4. VPN access disabled
+5. Workstation access locked
+
+**Within 48 Hours:**
+1. Manager notified to backup critical files
+2. Email archive created
+3. Group memberships logged for audit
+4. Exit interview scheduled (HR)
+
+**Within 30 Days:**
+1. Files transferred to manager or archived
+2. Account fully removed from AD
+3. License reclamation
+4. Equipment return verified
+
+---
+
 ### 4.10 Implementation Standards
 
 #### 4.10.1 Ansible Automation Requirements
@@ -1974,6 +2251,11 @@ ansible/
 - [file-share-permissions.md](../../simulated-client-project/security/file-share-permissions.md) - `SECURITY-FILES-001`
 - [secure-email-policy.md](../../simulated-client-project/security/secure-email-policy.md) - `POLICY-EMAIL-SECURE-001`
 
+**Workflows and Templates:**
+- [onboarding-workflow.md](../../simulated-client-project/workflows/onboarding-workflow.md) - `WORKFLOW-HR-ONBOARDING-001`
+- [intern-onboarding-checklist.md](../../simulated-client-project/workflows/intern-onboarding-checklist.md) - `CHECKLIST-HR-INTERN-001`
+- [project-onboarding-template.md](../../simulated-client-project/templates/project-onboarding-template.md) - `TEMPLATE-ONBOARDING-PROJECT-001`
+
 **Standards:**
 - [markdown.md](../../standards/markdown.md)
 
@@ -1995,6 +2277,7 @@ ansible/
 | v1.1 | 2025-12-23 | IT Business Analyst, SMB Analyst | Added organizational structure and file share structure from org documents |
 | v1.2 | 2025-12-23 | IT Security Analyst, IT Business Analyst | Added policy frameworks: GPO baseline, access control, data retention, administrative checkout procedures |
 | v1.3 | 2025-12-23 | IT Security Analyst, Linux Admin/Architect | Added security frameworks: HR audit rules, file permissions audit, access control matrix, secure email policy |
+| v1.4 | 2025-12-23 | HR Manager, IT Business Analyst | Added operational workflows: employee onboarding, intern provisioning, project onboarding template |
 
 ---
 
@@ -2101,7 +2384,7 @@ ansible/
 - Previous 4.9 Implementation Standards → 4.10 Implementation Standards
   - All subsections renumbered from 4.9.x to 4.10.x
 
-### Pass v1.3 (Current)
+### Pass v1.3
 **Source Documents Incorporated:**
 - `SECURITY-AUDITD-HR-001` - HR department auditd monitoring rules
 - `AUDIT-FILE-PERMISSIONS-001` - File share permissions audit procedure
@@ -2140,18 +2423,49 @@ ansible/
 **Sections Enhanced:**
 - 4.3 Security and Audit Requirements (comprehensive expansion with HR audit rules, file permissions, and access matrix)
 
+### Pass v1.4 (Current)
+**Source Documents Incorporated:**
+- `WORKFLOW-HR-ONBOARDING-001` - Employee onboarding workflow
+- `CHECKLIST-HR-INTERN-001` - Intern/temporary staff onboarding checklist
+- `TEMPLATE-ONBOARDING-PROJECT-001` - Project onboarding template
+
+**Sections Completed:**
+- **4.9.4 Employee Onboarding Workflows** (NEW)
+  - Onboarding scope and pre-start checklist (7-day timeline)
+  - Detailed workflow diagram (HR → IT → New Hire)
+  - Departmental responsibilities (HR, IT, Hiring Manager)
+  - Access provisioning by role (Finance, HR, Admin, Professional, Intern)
+  - First-day IT readiness verification
+  - Intern and temporary staff onboarding with special provisions
+  - Project onboarding template with access checklist
+  - Ansible automation integration examples
+  - Offboarding workflow outline (immediate, 48-hour, 30-day actions)
+
+**Key Features Added:**
+- **Automated account expiration** for interns (90-day maximum)
+- **Role-based provisioning tables** mapping roles to AD groups, shares, and workstations
+- **Pre-start timeline** with owner assignments and priority levels
+- **Ansible playbook example** for automated user provisioning
+- **Security provisions** for temporary staff (enhanced logging, limited access)
+- **Day 1 checklist** for new hire verification
+- **Project-specific onboarding** for lab contributors and agents
+
+**Sections Enhanced:**
+- 4.9 Operational Policies (added comprehensive onboarding workflows)
+
 **Sections Pending Future Passes:**
 - 4.5 Network Architecture (detailed VLAN topology, firewall rules)
 - 4.6 Compliance Framework (expand SOX and HIPAA-style controls)
 - 4.7.2 Monitoring Dashboards (Prometheus/Grafana configuration)
 - 4.8 Backup and Recovery (detailed backup procedures, restore testing)
+- 4.9.5 Offboarding Workflow (formalize termination procedures)
 
-### Next Planned Pass: v1.4
+### Next Planned Pass: v1.5
 **Planned Source Documents:**
 - Network topology and VLAN specifications
 - Workstation hardening and deployment configurations
 - Monitoring and alerting configurations
-- Additional workflow and process documents
+- Backup and disaster recovery procedures
 
 ---
 
