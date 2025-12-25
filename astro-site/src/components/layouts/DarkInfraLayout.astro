@@ -1,0 +1,31 @@
+---
+const { title, description } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="bg-[#0A0F1A] text-[#CCCCCC] font-sans">
+    <header class="sticky top-0 bg-[#0A0F1A] text-white border-b border-[#1E1B32]">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between">
+        <h1 class="text-xl font-bold">SMB IT Blueprint</h1>
+        <nav class="space-x-4">
+          <a href="/docs" class="hover:text-[#00FFFF]">Docs</a>
+          <a href="/policies" class="hover:text-[#00FFFF]">Policies</a>
+          <a href="/articles" class="hover:text-[#00FFFF]">Articles</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-10">
+      <slot />
+    </main>
+
+    <footer class="bg-[#0A0F1A] border-t border-[#1E1B32] text-sm text-[#888888] py-4 text-center">
+      &copy; 2025 Richard Sebos · SMB IT Blueprint · Last updated: Dec 2025
+    </footer>
+  </body>
+</html>
