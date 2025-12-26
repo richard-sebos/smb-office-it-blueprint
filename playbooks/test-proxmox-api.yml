@@ -1,0 +1,208 @@
+---
+################################################################################
+# Playbook: test-proxmox-api.yml
+# Purpose: Test Proxmox API connectivity and authentication
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-26
+# Version: 1.0
+#
+# Description:
+#   Simple test playbook to verify Project Ansible Server can successfully
+#   authenticate to the Proxmox API and retrieve basic cluster information.
+#   This is the foundation for all other Proxmox automation.
+#
+# Usage:
+#   ansible-playbook playbooks/test-proxmox-api.yml
+#   ansible-playbook playbooks/test-proxmox-api.yml -v  # Verbose output
+#
+# Requirements:
+#   - Proxmox API user created (ansible-project@pve)
+#   - API token generated and stored in vault
+#   - group_vars/all/vault.yml encrypted with credentials
+#   - Vault password file at ~/.vault_pass
+#
+# Success Criteria:
+#   - Successfully authenticates to Proxmox API
+#   - Retrieves cluster version information
+#   - Lists all cluster resources (nodes, VMs, storage)
+#   - No authentication errors
+################################################################################
+
+- name: Test Proxmox API Connection
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    # These should be defined in group_vars/all/vars.yml
+    # and reference vault variables for secrets
+    test_results: []
+
+  tasks:
+    - name: Display connection information
+      debug:
+        msg:
+          - "Testing connection to Proxmox API"
+          - "Host: {{ proxmox_api_host }}"
+          - "User: {{ proxmox_api_user }}"
+          - "Node: {{ proxmox_node }}"
+          - "SSL Validation: {{ proxmox_api_validate_certs }}"
+
+    - name: Test 1 - Get Proxmox version
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/version"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: version_result
+      failed_when: false
+
+    - name: Display Proxmox version
+      debug:
+        msg:
+          - "✓ Proxmox VE Version: {{ version_result.json.data.version }}"
+          - "  Release: {{ version_result.json.data.release }}"
+          - "  Repo ID: {{ version_result.json.data.repoid }}"
+      when: version_result.status == 200
+
+    - name: Test 2 - Get cluster resources
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/cluster/resources"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: resources_result
+      failed_when: false
+
+    - name: Display cluster summary
+      debug:
+        msg:
+          - "✓ Cluster Resources Retrieved"
+          - "  Total resources: {{ resources_result.json.data | length }}"
+      when: resources_result.status == 200
+
+    - name: Test 3 - List all nodes
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: nodes_result
+      failed_when: false
+
+    - name: Display node information
+      debug:
+        msg: "✓ Node: {{ item.node }} - Status: {{ item.status }} - CPU: {{ (item.cpu * 100) | round(1) }}% - Memory: {{ (item.mem / item.maxmem * 100) | round(1) }}%"
+      loop: "{{ nodes_result.json.data }}"
+      when: nodes_result.status == 200
+
+    - name: Test 4 - List existing VMs on specified node
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: vms_result
+      failed_when: false
+
+    - name: Display existing VMs
+      debug:
+        msg: "✓ VM {{ item.vmid }}: {{ item.name }} - Status: {{ item.status }} - CPUs: {{ item.cpus }} - Memory: {{ (item.maxmem / 1024 / 1024 / 1024) | round(1) }}GB"
+      loop: "{{ vms_result.json.data }}"
+      when:
+        - vms_result.status == 200
+        - vms_result.json.data | length > 0
+
+    - name: Display no VMs message
+      debug:
+        msg: "  No VMs currently exist on node {{ proxmox_node }}"
+      when:
+        - vms_result.status == 200
+        - vms_result.json.data | length == 0
+
+    - name: Test 5 - List storage pools
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/storage"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: storage_result
+      failed_when: false
+
+    - name: Display storage pools
+      debug:
+        msg: "✓ Storage: {{ item.storage }} - Type: {{ item.type }} - Content: {{ item.content }}"
+      loop: "{{ storage_result.json.data }}"
+      when: storage_result.status == 200
+
+    - name: Test 6 - List resource pools (if any)
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/pools"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pools_result
+      failed_when: false
+
+    - name: Display resource pools
+      debug:
+        msg: "✓ Pool: {{ item.poolid }} - Comment: {{ item.comment | default('No comment') }}"
+      loop: "{{ pools_result.json.data }}"
+      when:
+        - pools_result.status == 200
+        - pools_result.json.data | length > 0
+
+    - name: Display no pools message
+      debug:
+        msg: "  No resource pools currently defined"
+      when:
+        - pools_result.status == 200
+        - pools_result.json.data | length == 0
+
+    - name: "=== FINAL TEST RESULTS ==="
+      debug:
+        msg:
+          - ""
+          - "╔════════════════════════════════════════════════════════════╗"
+          - "║           PROXMOX API CONNECTION TEST RESULTS             ║"
+          - "╚════════════════════════════════════════════════════════════╝"
+          - ""
+          - "{% if version_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - API Version Retrieval"
+          - "{% if resources_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - Cluster Resources Query"
+          - "{% if nodes_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - Node Information Query"
+          - "{% if vms_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - VM List Query"
+          - "{% if storage_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - Storage Query"
+          - "{% if pools_result.status == 200 %}✓ PASS{% else %}✗ FAIL{% endif %} - Resource Pools Query"
+          - ""
+          - "{% if version_result.status == 200 and resources_result.status == 200 and nodes_result.status == 200 %}STATUS: ✓ ALL TESTS PASSED - API connectivity verified!{% else %}STATUS: ✗ SOME TESTS FAILED - Check credentials and permissions{% endif %}"
+          - ""
+
+    - name: Fail playbook if authentication failed
+      fail:
+        msg: |
+          ✗ API authentication failed!
+
+          Common issues:
+          1. Incorrect Proxmox IP in inventory/hosts.yml
+          2. API token not configured in vault
+          3. Proxmox user lacks required permissions
+          4. Network connectivity issues
+
+          Check your configuration:
+          - Proxmox Host: {{ proxmox_api_host }}
+          - API User: {{ proxmox_api_user }}
+          - Token ID: {{ proxmox_api_token_id }}
+
+          HTTP Status: {{ version_result.status | default('Connection failed') }}
+      when: version_result.status != 200
