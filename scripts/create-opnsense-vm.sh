@@ -45,8 +45,8 @@ VMID=100
 VM_NAME="opnsense-firewall"
 CORES=2
 MEMORY=4096  # MB
-DISK_SIZE="32G"
-STORAGE="local-lvm"  # Change if your storage is different
+DISK_SIZE="32"
+STORAGE="vmDrive"  # VM storage
 ISO_STORAGE="local"  # Storage for ISO files
 POOL="infrastructure"
 
@@ -177,8 +177,9 @@ Template: OPNsense ${OPNSENSE_VERSION}"
 configure_storage() {
     log_info "Configuring storage..."
 
-    # Add disk
-    qm set $VMID --scsi0 ${STORAGE}:${DISK_SIZE}
+    # Add disk (size in GB, no 'G' suffix for qm set)
+    local disk_size_gb="${DISK_SIZE%G}"  # Remove 'G' suffix if present
+    qm set $VMID --scsi0 ${STORAGE}:${disk_size_gb}
 
     # Attach ISO
     qm set $VMID --ide2 ${ISO_STORAGE}:iso/${OPNSENSE_ISO},media=cdrom

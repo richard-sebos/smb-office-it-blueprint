@@ -36,7 +36,7 @@ VM_NAME="ubuntu-2204-template"
 CORES=2
 MEMORY=2048
 DISK_SIZE="10G"
-STORAGE="local-lvm"
+STORAGE="vmDrive"
 POOL="templates"
 
 # Cloud image
