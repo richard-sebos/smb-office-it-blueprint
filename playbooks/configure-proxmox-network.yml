@@ -50,14 +50,12 @@
 ################################################################################
 
 - name: Configure Proxmox Network VLANs
-  hosts: localhost
+  hosts: pve
   gather_facts: yes
-  connection: local
 
   vars:
-    proxmox_ssh_user: "root"
-    proxmox_ssh_key: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519"
-    backup_dir: "{{ lookup('env', 'HOME') }}/Documents/claude/projects/smb-office-it-blueprint/backups/network"
+    backup_dir: "/tmp/network-backups"
+    local_backup_dir: "{{ playbook_dir }}/../backups/network"
 
     # VLAN configuration according to SMB Office IT Blueprint
     vlans:
@@ -101,7 +99,7 @@
           ╚════════════════════════════════════════════════════════════════════╝
 
           This playbook will create an isolated internal network on Proxmox:
-            Proxmox Host: {{ proxmox_api_host }}
+            Proxmox Host: {{ ansible_host }}
 
           Network Architecture:
             vmbr0 (existing): Your lab network - NO CHANGES
@@ -130,53 +128,31 @@
             - Only creates new vmbr1 bridge (isolated, no physical connection)
             - Original config backed up to {{ backup_dir }}
 
-    - name: Create backup directory
+    - name: Create local backup directory
       file:
-        path: "{{ backup_dir }}"
+        path: "{{ local_backup_dir }}"
         state: directory
         mode: '0755'
       delegate_to: localhost
+      run_once: true
 
     # ========================================================================
     # Backup Current Network Configuration
     # ========================================================================
 
-    - name: Check if we can SSH to Proxmox host
-      shell: "ssh -i {{ proxmox_ssh_key }} -o ConnectTimeout=5 -o StrictHostKeyChecking=no {{ proxmox_ssh_user }}@{{ proxmox_api_host }} 'echo OK'"
-      register: ssh_test
-      failed_when: false
-      changed_when: false
-      check_mode: no
+    - name: Read current /etc/network/interfaces
+      slurp:
+        src: /etc/network/interfaces
+      register: network_config_b64
 
-    - name: Fail if SSH connection not working
-      fail:
-        msg: |
-          Cannot SSH to Proxmox host: {{ proxmox_api_host }}
-
-          SSH test result: {{ ssh_test.stdout | default('No output') }}
-          Error: {{ ssh_test.stderr | default('No error') }}
-          Return code: {{ ssh_test.rc }}
-
-          Please ensure:
-          1. SSH key authentication is set up for {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-          2. Host is reachable on the network
-
-          Debug: Try manually running:
-            ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} 'echo OK'
-      when: ssh_test.rc != 0
-
-    - name: Backup current /etc/network/interfaces
-      shell: >
-        ssh -i {{ proxmox_ssh_key }} {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-        'cat /etc/network/interfaces'
-      register: original_network_config
-      changed_when: false
-      check_mode: no
+    - name: Decode network configuration
+      set_fact:
+        original_network_config: "{{ network_config_b64.content | b64decode }}"
 
     - name: Save backup locally
       copy:
-        content: "{{ original_network_config.stdout }}"
-        dest: "{{ backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup"
+        content: "{{ original_network_config }}"
+        dest: "{{ local_backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup"
         mode: '0644'
       delegate_to: localhost
 
@@ -184,16 +160,14 @@
       debug:
         msg: |
           ✓ Network configuration backed up to:
-            {{ backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup
+            {{ local_backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup
 
     # ========================================================================
     # Analyze Current Network Configuration
     # ========================================================================
 
     - name: Check if vmbr1 already exists
-      shell: >
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-        "grep -q '^auto vmbr1' /etc/network/interfaces && echo 'yes' || echo 'no'"
+      shell: "grep -q '^auto vmbr1' /etc/network/interfaces && echo 'yes' || echo 'no'"
       register: vmbr1_exists
       changed_when: false
       check_mode: no
@@ -203,9 +177,7 @@
         msg: "{{ 'ℹ vmbr1 already exists (will check VLAN configuration)' if vmbr1_exists.stdout == 'yes' else '✓ vmbr1 does not exist yet (will be created)' }}"
 
     - name: Check if vmbr1 is already VLAN-aware
-      shell: >
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-        "grep -A 10 '^iface vmbr1' /etc/network/interfaces | grep -q 'bridge-vlan-aware yes' && echo 'yes' || echo 'no'"
+      shell: "grep -A 10 '^iface vmbr1' /etc/network/interfaces | grep -q 'bridge-vlan-aware yes' && echo 'yes' || echo 'no'"
       register: vlan_aware_check
       changed_when: false
       check_mode: no
@@ -221,9 +193,9 @@
     # Generate New Network Configuration
     # ========================================================================
 
-    - name: Read current network config
+    - name: Set current network config variable
       set_fact:
-        current_config: "{{ original_network_config.stdout }}"
+        current_config: "{{ original_network_config }}"
 
     - name: Generate vmbr1 bridge configuration
       set_fact:
@@ -254,9 +226,7 @@
           {% endfor %}
 
     - name: Check if VLAN configurations already exist
-      shell: >
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-        "grep -q 'vmbr1.{{ item.vlan_id }}' /etc/network/interfaces && echo 'exists' || echo 'missing'"
+      shell: "grep -q 'vmbr1.{{ item.vlan_id }}' /etc/network/interfaces && echo 'exists' || echo 'missing'"
       register: vlan_exists_check
       loop: "{{ vlans }}"
       loop_control:
@@ -298,33 +268,27 @@
     # ========================================================================
 
     - name: Create vmbr1 bridge
-      shell: |
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} "
-        cat >> /etc/network/interfaces << 'VMBR1_EOF'
-
-        {{ vmbr1_config }}
-        VMBR1_EOF
-        "
+      blockinfile:
+        path: /etc/network/interfaces
+        block: |
+          {{ vmbr1_config }}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - vmbr1"
       when:
         - needs_vmbr1
         - not ansible_check_mode
 
     - name: Add VLAN interface configurations
-      shell: |
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} "
-        cat >> /etc/network/interfaces << 'VLAN_EOF'
-
-        {{ vlan_configs }}
-        VLAN_EOF
-        "
+      blockinfile:
+        path: /etc/network/interfaces
+        block: |
+          {{ vlan_configs }}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLANs"
       when:
         - missing_vlans | length > 0
         - not ansible_check_mode
 
     - name: Validate network configuration syntax
-      shell: >
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
-        "ifup --no-act --all 2>&1 || true"
+      shell: "ifup --no-act --all 2>&1 || true"
       register: config_validation
       changed_when: false
       when: not ansible_check_mode
@@ -352,7 +316,7 @@
           {% if ansible_check_mode %}
           ⚠️  CHECK MODE - No changes were made
           {% else %}
-          ✓ Network configuration updated on {{ proxmox_api_host }}
+          ✓ Network configuration updated on {{ ansible_host }}
           {% endif %}
 
           Summary of changes:
@@ -368,28 +332,25 @@
           {% endif %}
 
           Backup location:
-            {{ backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup
+            {{ local_backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup
 
           {% if not ansible_check_mode %}
           ⚠️  NEXT STEPS REQUIRED:
 
           1. Verify the configuration:
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} cat /etc/network/interfaces
+             ssh root@{{ ansible_host }} cat /etc/network/interfaces
 
           2. Apply the network configuration:
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} ifreload -a
+             ssh root@{{ ansible_host }} ifreload -a
 
           3. Verify VLAN interfaces are created:
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} ip link show
+             ssh root@{{ ansible_host }} ip link show
 
           4. If any issues occur, restore from backup:
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} \
-               "cp /etc/network/interfaces /etc/network/interfaces.broken && \
-                cat > /etc/network/interfaces" < {{ backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} ifreload -a
+             Use the restore script at {{ local_backup_dir }}/restore-network-{{ ansible_date_time.iso8601_basic_short }}.sh
 
           5. Reboot Proxmox host for changes to fully take effect (optional but recommended):
-             ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} reboot
+             ssh root@{{ ansible_host }} reboot
 
           ⚠️  IMPORTANT: These changes only configure the Proxmox host networking.
               External network infrastructure (switches, routers) must be configured
@@ -404,9 +365,9 @@
           # Generated: {{ ansible_date_time.iso8601 }}
           # Restores Proxmox network configuration from backup
 
-          BACKUP_FILE="{{ backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup"
-          PROXMOX_HOST="{{ proxmox_api_host }}"
-          PROXMOX_USER="{{ proxmox_ssh_user }}"
+          BACKUP_FILE="{{ local_backup_dir }}/interfaces.{{ ansible_date_time.iso8601_basic_short }}.backup"
+          PROXMOX_HOST="{{ ansible_host }}"
+          PROXMOX_USER="root"
 
           echo "Restoring network configuration from backup..."
           echo "Backup: $BACKUP_FILE"
@@ -430,7 +391,7 @@
           echo ""
           echo "If you still have issues, reboot the Proxmox host:"
           echo "  ssh ${PROXMOX_USER}@${PROXMOX_HOST} reboot"
-        dest: "{{ backup_dir }}/restore-network-{{ ansible_date_time.iso8601_basic_short }}.sh"
+        dest: "{{ local_backup_dir }}/restore-network-{{ ansible_date_time.iso8601_basic_short }}.sh"
         mode: '0755'
       delegate_to: localhost
       when: not ansible_check_mode
@@ -439,7 +400,7 @@
       debug:
         msg: |
           ℹ️  Emergency restore script created:
-            {{ backup_dir }}/restore-network-{{ ansible_date_time.iso8601_basic_short }}.sh
+            {{ local_backup_dir }}/restore-network-{{ ansible_date_time.iso8601_basic_short }}.sh
 
           If something goes wrong, run this script to restore the original configuration.
       when: not ansible_check_mode
