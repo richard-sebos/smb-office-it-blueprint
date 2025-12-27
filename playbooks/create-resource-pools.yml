@@ -72,6 +72,7 @@
         return_content: yes
       register: existing_pools
       failed_when: false
+      check_mode: no
 
     - name: Check if API call succeeded
       fail:
@@ -174,6 +175,7 @@
         return_content: yes
       register: final_pools
       no_log: true
+      check_mode: no
 
     - name: Parse final JSON response
       set_fact:
