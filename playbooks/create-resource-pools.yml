@@ -71,6 +71,20 @@
         validate_certs: "{{ proxmox_api_validate_certs }}"
         return_content: yes
       register: existing_pools
+      failed_when: false
+
+    - name: Check if API call succeeded
+      fail:
+        msg: |
+          Failed to query Proxmox API for resource pools.
+          Status: {{ existing_pools.status | default('unknown') }}
+          Error: {{ existing_pools.msg | default('No error message') }}
+
+          Please verify:
+          - Proxmox host is reachable: {{ proxmox_api_host }}
+          - API credentials are correct
+          - User has Pool.Audit privileges
+      when: existing_pools.status is not defined or existing_pools.status != 200
 
     - name: Debug existing_pools response
       debug:
@@ -80,7 +94,6 @@
     - name: Parse JSON response
       set_fact:
         existing_pools_data: "{{ existing_pools.json.data if existing_pools.json is defined else (existing_pools.content | from_json).data }}"
-      when: existing_pools is defined
 
     - name: Extract existing pool IDs
       set_fact:
