@@ -71,11 +71,16 @@
         validate_certs: "{{ proxmox_api_validate_certs }}"
         return_content: yes
       register: existing_pools
-      no_log: true
+
+    - name: Debug existing_pools response
+      debug:
+        var: existing_pools
+      when: existing_pools is defined
 
     - name: Parse JSON response
       set_fact:
         existing_pools_data: "{{ existing_pools.json.data if existing_pools.json is defined else (existing_pools.content | from_json).data }}"
+      when: existing_pools is defined
 
     - name: Extract existing pool IDs
       set_fact:
