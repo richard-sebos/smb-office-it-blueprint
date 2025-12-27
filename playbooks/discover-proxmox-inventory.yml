@@ -45,7 +45,7 @@
 
 - name: Discover Proxmox Infrastructure Inventory
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   connection: local
 
   vars:
