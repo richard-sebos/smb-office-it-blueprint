@@ -101,21 +101,20 @@
 
     - name: Display node information
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "NODES ({{ pve_nodes.json.data | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for node in pve_nodes.json.data %}"
-          - "Node: {{ node.node }}"
-          - "  Status: {{ node.status }}"
-          - "  Type: {{ node.type | default('node') }}"
-          - "  CPU Usage: {{ (node.cpu * 100) | round(2) }}% ({{ node.maxcpu }} cores)"
-          - "  Memory: {{ (node.mem / 1024 / 1024 / 1024) | round(2) }}GB / {{ (node.maxmem / 1024 / 1024 / 1024) | round(2) }}GB ({{ (node.mem / node.maxmem * 100) | round(1) }}%)"
-          - "  Uptime: {{ (node.uptime / 86400) | round(1) }} days"
-          - "  Kernel: {{ node.kversion | default('Unknown') }}"
-          - "  PVE Version: {{ node.pveversion | default('Unknown') }}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          NODES ({{ pve_nodes.json.data | length }})
+          ════════════════════════════════════════════════════════════
+          {% for node in pve_nodes.json.data %}
+          Node: {{ node.node }}
+            Status: {{ node.status }}
+            Type: {{ node.type | default('node') }}
+            CPU Usage: {{ (node.cpu * 100) | round(2) }}% ({{ node.maxcpu }} cores)
+            Memory: {{ (node.mem / 1024 / 1024 / 1024) | round(2) }}GB / {{ (node.maxmem / 1024 / 1024 / 1024) | round(2) }}GB ({{ (node.mem / node.maxmem * 100) | round(1) }}%)
+            Uptime: {{ (node.uptime / 86400) | round(1) }} days
+            Kernel: {{ node.kversion | default('Unknown') }}
+            PVE Version: {{ node.pveversion | default('Unknown') }}
+          {% endfor %}
       tags: [always, nodes]
 
     # ========================================================================
@@ -143,25 +142,24 @@
 
     - name: Display VM inventory
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "VIRTUAL MACHINES ({{ all_vms | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% if all_vms | length > 0 %}"
-          - "{% for vm in all_vms | sort(attribute='vmid') %}"
-          - "VM {{ vm.vmid }}: {{ vm.name }}"
-          - "  Status: {{ vm.status }}"
-          - "  Node: {{ vm.node | default('Unknown') }}"
-          - "  CPUs: {{ vm.cpus }}"
-          - "  Memory: {{ (vm.maxmem / 1024 / 1024 / 1024) | round(2) }}GB"
-          - "  Disk: {{ (vm.maxdisk / 1024 / 1024 / 1024) | round(2) }}GB"
-          - "  Uptime: {% if vm.uptime is defined %}{{ (vm.uptime / 3600) | round(1) }} hours{% else %}N/A{% endif %}"
-          - "  Template: {{ vm.template | default(0) == 1 }}"
-          - "{% endfor %}"
-          - "{% else %}"
-          - "No VMs found"
-          - "{% endif %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          VIRTUAL MACHINES ({{ all_vms | length }})
+          ════════════════════════════════════════════════════════════
+          {% if all_vms | length > 0 %}
+          {% for vm in all_vms | sort(attribute='vmid') %}
+          VM {{ vm.vmid }}: {{ vm.name }}
+            Status: {{ vm.status }}
+            Node: {{ vm.node | default('Unknown') }}
+            CPUs: {{ vm.cpus }}
+            Memory: {{ (vm.maxmem / 1024 / 1024 / 1024) | round(2) }}GB
+            Disk: {{ (vm.maxdisk / 1024 / 1024 / 1024) | round(2) }}GB
+            Uptime: {% if vm.uptime is defined %}{{ (vm.uptime / 3600) | round(1) }} hours{% else %}N/A{% endif %}
+            Template: {{ vm.template | default(0) == 1 }}
+          {% endfor %}
+          {% else %}
+          No VMs found
+          {% endif %}
       tags: [always, vms]
 
     # ========================================================================
@@ -186,28 +184,27 @@
 
     - name: Display detailed VM configurations (all mode)
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "DETAILED VM CONFIGURATIONS"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for result in vm_configs_detailed.results %}"
-          - "{% if result.json is defined and result.json.data is defined %}"
-          - "VM {{ result.item.vmid }}: {{ result.item.name }}"
-          - "  Boot Order: {{ result.json.data.boot | default('default') }}"
-          - "  OS Type: {{ result.json.data.ostype | default('other') }}"
-          - "  BIOS: {{ result.json.data.bios | default('seabios') }}"
-          - "  Machine: {{ result.json.data.machine | default('pc') }}"
-          - "{% if result.json.data.sockets is defined %}  Sockets: {{ result.json.data.sockets }}{% endif %}"
-          - "{% if result.json.data.cores is defined %}  Cores: {{ result.json.data.cores }}{% endif %}"
-          - "{% if result.json.data.numa is defined %}  NUMA: {{ result.json.data.numa }}{% endif %}"
-          - "{% if result.json.data.agent is defined %}  QEMU Agent: {{ result.json.data.agent }}{% endif %}"
-          - "{% if result.json.data.net0 is defined %}  Network 0: {{ result.json.data.net0 }}{% endif %}"
-          - "{% if result.json.data.net1 is defined %}  Network 1: {{ result.json.data.net1 }}{% endif %}"
-          - "{% if result.json.data.scsi0 is defined %}  Disk 0: {{ result.json.data.scsi0 }}{% endif %}"
-          - "{% if result.json.data.ide2 is defined %}  CD-ROM: {{ result.json.data.ide2 }}{% endif %}"
-          - "{% endif %}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          DETAILED VM CONFIGURATIONS
+          ════════════════════════════════════════════════════════════
+          {% for result in vm_configs_detailed.results %}
+          {% if result.json is defined and result.json.data is defined %}
+          VM {{ result.item.vmid }}: {{ result.item.name }}
+            Boot Order: {{ result.json.data.boot | default('default') }}
+            OS Type: {{ result.json.data.ostype | default('other') }}
+            BIOS: {{ result.json.data.bios | default('seabios') }}
+            Machine: {{ result.json.data.machine | default('pc') }}
+          {% if result.json.data.sockets is defined %}  Sockets: {{ result.json.data.sockets }}{% endif %}
+          {% if result.json.data.cores is defined %}  Cores: {{ result.json.data.cores }}{% endif %}
+          {% if result.json.data.numa is defined %}  NUMA: {{ result.json.data.numa }}{% endif %}
+          {% if result.json.data.agent is defined %}  QEMU Agent: {{ result.json.data.agent }}{% endif %}
+          {% if result.json.data.net0 is defined %}  Network 0: {{ result.json.data.net0 }}{% endif %}
+          {% if result.json.data.net1 is defined %}  Network 1: {{ result.json.data.net1 }}{% endif %}
+          {% if result.json.data.scsi0 is defined %}  Disk 0: {{ result.json.data.scsi0 }}{% endif %}
+          {% if result.json.data.ide2 is defined %}  CD-ROM: {{ result.json.data.ide2 }}{% endif %}
+          {% endif %}
+          {% endfor %}
       when: discovery_mode == 'all' and vm_configs_detailed.results is defined
       tags: [vms]
 
@@ -244,40 +241,38 @@
 
     - name: Display storage information
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "STORAGE POOLS ({{ pve_storage.json.data | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for storage in pve_storage.json.data %}"
-          - "Storage: {{ storage.storage }}"
-          - "  Type: {{ storage.type }}"
-          - "  Content: {{ storage.content }}"
-          - "  Enabled: {{ storage.enabled | default(1) == 1 }}"
-          - "  Shared: {{ storage.shared | default(0) == 1 }}"
-          - "{% if storage.path is defined %}  Path: {{ storage.path }}{% endif %}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          STORAGE POOLS ({{ pve_storage.json.data | length }})
+          ════════════════════════════════════════════════════════════
+          {% for storage in pve_storage.json.data %}
+          Storage: {{ storage.storage }}
+            Type: {{ storage.type }}
+            Content: {{ storage.content }}
+            Enabled: {{ storage.enabled | default(1) == 1 }}
+            Shared: {{ storage.shared | default(0) == 1 }}
+          {% if storage.path is defined %}  Path: {{ storage.path }}{% endif %}
+          {% endfor %}
       tags: [always, storage]
 
     - name: Display storage capacity details (all mode)
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "STORAGE CAPACITY DETAILS"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for result in pve_storage_status.results %}"
-          - "{% if result.json is defined and result.json.data is defined %}"
-          - "{% set data = result.json.data %}"
-          - "Storage: {{ result.item.storage }}"
-          - "  Type: {{ data.type | default('unknown') }}"
-          - "{% if data.total is defined and data.used is defined %}"
-          - "  Capacity: {{ (data.used / 1024 / 1024 / 1024) | round(2) }}GB / {{ (data.total / 1024 / 1024 / 1024) | round(2) }}GB ({{ ((data.used / data.total) * 100) | round(1) }}% used)"
-          - "  Available: {{ ((data.total - data.used) / 1024 / 1024 / 1024) | round(2) }}GB"
-          - "{% endif %}"
-          - "  Active: {{ data.active | default(1) == 1 }}"
-          - "{% endif %}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          STORAGE CAPACITY DETAILS
+          ════════════════════════════════════════════════════════════
+          {% for result in pve_storage_status.results %}
+          {% if result.json is defined and result.json.data is defined %}
+          {% set data = result.json.data %}
+          Storage: {{ result.item.storage }}
+            Type: {{ data.type | default('unknown') }}
+          {% if data.total is defined and data.used is defined %}
+            Capacity: {{ (data.used / 1024 / 1024 / 1024) | round(2) }}GB / {{ (data.total / 1024 / 1024 / 1024) | round(2) }}GB ({{ ((data.used / data.total) * 100) | round(1) }}% used)
+            Available: {{ ((data.total - data.used) / 1024 / 1024 / 1024) | round(2) }}GB
+          {% endif %}
+            Active: {{ data.active | default(1) == 1 }}
+          {% endif %}
+          {% endfor %}
       when: discovery_mode == 'all' and pve_storage_status.results is defined
       tags: [storage]
 
@@ -298,20 +293,19 @@
 
     - name: Display network configuration
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "NETWORK INTERFACES ({{ pve_network.json.data | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for iface in pve_network.json.data | sort(attribute='iface') %}"
-          - "Interface: {{ iface.iface }}"
-          - "  Type: {{ iface.type }}"
-          - "  Active: {{ iface.active | default(0) == 1 }}"
-          - "{% if iface.address is defined %}  IP: {{ iface.address }}{% if iface.netmask is defined %}/{{ iface.netmask }}{% endif %}{% endif %}"
-          - "{% if iface.gateway is defined %}  Gateway: {{ iface.gateway }}{% endif %}"
-          - "{% if iface.bridge_ports is defined %}  Bridge Ports: {{ iface.bridge_ports }}{% endif %}"
-          - "{% if iface.bridge_vlan_aware is defined %}  VLAN Aware: {{ iface.bridge_vlan_aware == 1 }}{% endif %}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          NETWORK INTERFACES ({{ pve_network.json.data | length }})
+          ════════════════════════════════════════════════════════════
+          {% for iface in pve_network.json.data | sort(attribute='iface') %}
+          Interface: {{ iface.iface }}
+            Type: {{ iface.type }}
+            Active: {{ iface.active | default(0) == 1 }}
+          {% if iface.address is defined %}  IP: {{ iface.address }}{% if iface.netmask is defined %}/{{ iface.netmask }}{% endif %}{% endif %}
+          {% if iface.gateway is defined %}  Gateway: {{ iface.gateway }}{% endif %}
+          {% if iface.bridge_ports is defined %}  Bridge Ports: {{ iface.bridge_ports }}{% endif %}
+          {% if iface.bridge_vlan_aware is defined %}  VLAN Aware: {{ iface.bridge_vlan_aware == 1 }}{% endif %}
+          {% endfor %}
       tags: [always, network]
 
     # ========================================================================
@@ -331,20 +325,19 @@
 
     - name: Display resource pools
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "RESOURCE POOLS ({{ pve_pools.json.data | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% if pve_pools.json.data | length > 0 %}"
-          - "{% for pool in pve_pools.json.data | sort(attribute='poolid') %}"
-          - "Pool: {{ pool.poolid }}"
-          - "{% if pool.comment is defined %}  Comment: {{ pool.comment }}{% endif %}"
-          - "{% if pool.members is defined %}  Members: {{ pool.members | length }}{% endif %}"
-          - "{% endfor %}"
-          - "{% else %}"
-          - "No resource pools defined"
-          - "{% endif %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          RESOURCE POOLS ({{ pve_pools.json.data | length }})
+          ════════════════════════════════════════════════════════════
+          {% if pve_pools.json.data | length > 0 %}
+          {% for pool in pve_pools.json.data | sort(attribute='poolid') %}
+          Pool: {{ pool.poolid }}
+          {% if pool.comment is defined %}  Comment: {{ pool.comment }}{% endif %}
+          {% if pool.members is defined %}  Members: {{ pool.members | length }}{% endif %}
+          {% endfor %}
+          {% else %}
+          No resource pools defined
+          {% endif %}
       tags: [always, pools]
 
     # ========================================================================
@@ -364,18 +357,17 @@
 
     - name: Display user accounts
       debug:
-        msg:
-          - "════════════════════════════════════════════════════════════"
-          - "USER ACCOUNTS ({{ pve_users.json.data | length }})"
-          - "════════════════════════════════════════════════════════════"
-          - "{% for user in pve_users.json.data | sort(attribute='userid') %}"
-          - "User: {{ user.userid }}"
-          - "  Enabled: {{ user.enable | default(1) == 1 }}"
-          - "{% if user.comment is defined %}  Comment: {{ user.comment }}{% endif %}"
-          - "{% if user.email is defined %}  Email: {{ user.email }}{% endif %}"
-          - "{% if user.groups is defined %}  Groups: {{ user.groups | join(', ') }}{% endif %}"
-          - "{% endfor %}"
-          - ""
+        msg: |
+          ════════════════════════════════════════════════════════════
+          USER ACCOUNTS ({{ pve_users.json.data | length }})
+          ════════════════════════════════════════════════════════════
+          {% for user in pve_users.json.data | sort(attribute='userid') %}
+          User: {{ user.userid }}
+            Enabled: {{ user.enable | default(1) == 1 }}
+          {% if user.comment is defined %}  Comment: {{ user.comment }}{% endif %}
+          {% if user.email is defined %}  Email: {{ user.email }}{% endif %}
+          {% if user.groups is defined %}  Groups: {{ user.groups | join(', ') }}{% endif %}
+          {% endfor %}
       tags: [always, users]
 
     # ========================================================================
@@ -520,22 +512,21 @@
 
     - name: Display final summary
       debug:
-        msg:
-          - ""
-          - "╔════════════════════════════════════════════════════════════╗"
-          - "║              DISCOVERY COMPLETE                           ║"
-          - "╚════════════════════════════════════════════════════════════╝"
-          - ""
-          - "Summary:"
-          - "  Nodes: {{ inventory_data.summary.total_nodes }}"
-          - "  VMs: {{ inventory_data.summary.total_vms }} ({{ inventory_data.summary.running_vms }} running, {{ inventory_data.summary.stopped_vms }} stopped)"
-          - "  Templates: {{ inventory_data.summary.templates }}"
-          - "  Storage Pools: {{ inventory_data.summary.total_storage }}"
-          - "  Resource Pools: {{ inventory_data.summary.total_pools }}"
-          - "  User Accounts: {{ inventory_data.summary.total_users }}"
-          - ""
-          - "Reports saved:"
-          - "  JSON: {{ report_dir }}/proxmox-inventory-{{ timestamp }}.json"
-          - "  Markdown: {{ report_dir }}/proxmox-inventory-{{ timestamp }}.md"
-          - ""
+        msg: |
+
+          ╔════════════════════════════════════════════════════════════╗
+          ║              DISCOVERY COMPLETE                           ║
+          ╚════════════════════════════════════════════════════════════╝
+
+          Summary:
+            Nodes: {{ inventory_data.summary.total_nodes }}
+            VMs: {{ inventory_data.summary.total_vms }} ({{ inventory_data.summary.running_vms }} running, {{ inventory_data.summary.stopped_vms }} stopped)
+            Templates: {{ inventory_data.summary.templates }}
+            Storage Pools: {{ inventory_data.summary.total_storage }}
+            Resource Pools: {{ inventory_data.summary.total_pools }}
+            User Accounts: {{ inventory_data.summary.total_users }}
+
+          Reports saved:
+            JSON: {{ report_dir }}/proxmox-inventory-{{ timestamp }}.json
+            Markdown: {{ report_dir }}/proxmox-inventory-{{ timestamp }}.md
       tags: [always, report]
