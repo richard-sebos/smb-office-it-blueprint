@@ -52,7 +52,7 @@
     timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
     report_dir: "/tmp"
     inventory_data: {}
-    discovery_mode: "{{ discovery_mode | default('standard') }}"
+    _discovery_mode: "{{ discovery_mode | default('standard') }}"
 
   tasks:
     # ========================================================================
@@ -178,7 +178,7 @@
       loop: "{{ all_vms }}"
       loop_control:
         label: "VM {{ item.vmid }}: {{ item.name }}"
-      when: discovery_mode == 'all' and all_vms | length > 0
+      when: _discovery_mode == 'all' and all_vms | length > 0
       failed_when: false
       tags: [vms]
 
@@ -205,7 +205,7 @@
           {% if result.json.data.ide2 is defined %}  CD-ROM: {{ result.json.data.ide2 }}{% endif %}
           {% endif %}
           {% endfor %}
-      when: discovery_mode == 'all' and vm_configs_detailed.results is defined
+      when: _discovery_mode == 'all' and vm_configs_detailed.results is defined
       tags: [vms]
 
     # ========================================================================
@@ -273,7 +273,7 @@
             Active: {{ data.active | default(1) == 1 }}
           {% endif %}
           {% endfor %}
-      when: discovery_mode == 'all' and pve_storage_status.results is defined
+      when: _discovery_mode == 'all' and pve_storage_status.results is defined
       tags: [storage]
 
     # ========================================================================
@@ -378,16 +378,16 @@
       set_fact:
         inventory_data:
           discovery_time: "{{ ansible_date_time.iso8601 }}"
-          discovery_mode: "{{ discovery_mode }}"
+          discovery_mode: "{{ _discovery_mode }}"
           proxmox:
             version: "{{ pve_version.json.data.version }}"
             release: "{{ pve_version.json.data.release }}"
             repoid: "{{ pve_version.json.data.repoid }}"
           nodes: "{{ pve_nodes.json.data }}"
           vms: "{{ all_vms }}"
-          vm_configs: "{{ vm_configs_detailed.results | default([]) | map(attribute='json.data') | list if discovery_mode == 'all' else [] }}"
+          vm_configs: "{{ vm_configs_detailed.results | default([]) | map(attribute='json.data') | list if _discovery_mode == 'all' else [] }}"
           storage: "{{ pve_storage.json.data }}"
-          storage_status: "{{ pve_storage_status.results | default([]) | map(attribute='json.data') | list if discovery_mode == 'all' else [] }}"
+          storage_status: "{{ pve_storage_status.results | default([]) | map(attribute='json.data') | list if _discovery_mode == 'all' else [] }}"
           network: "{{ pve_network.json.data }}"
           pools: "{{ pve_pools.json.data }}"
           users: "{{ pve_users.json.data }}"
