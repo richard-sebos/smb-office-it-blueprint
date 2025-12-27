@@ -1,0 +1,191 @@
+---
+################################################################################
+# Playbook: create-resource-pools.yml
+# Purpose: Create resource pools in Proxmox for organizing VMs
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-27
+# Version: 1.0
+#
+# Description:
+#   Creates logical resource pools in Proxmox VE to organize virtual machines
+#   by function (infrastructure, production, dmz). Resource pools help with:
+#   - Logical organization of VMs
+#   - Permission management
+#   - Resource allocation tracking
+#   - Backup policy grouping
+#
+# Usage:
+#   ansible-playbook playbooks/create-resource-pools.yml
+#   ansible-playbook playbooks/create-resource-pools.yml --check  # Dry run
+#
+# Prerequisites:
+#   - Proxmox API credentials configured in group_vars
+#   - ansible-project@pve user with Pool.Allocate privilege
+#
+################################################################################
+
+- name: Create Proxmox Resource Pools
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  vars:
+    # Define resource pools according to SMB Office IT Blueprint
+    resource_pools:
+      - poolid: "infrastructure"
+        comment: "Core infrastructure services (firewall, automation, monitoring)"
+      - poolid: "production"
+        comment: "Production application servers (AD, file server, backups, apps)"
+      - poolid: "dmz"
+        comment: "DMZ and public-facing services (web, mail)"
+      - poolid: "templates"
+        comment: "VM templates for rapid deployment"
+      - poolid: "development"
+        comment: "Development and testing VMs"
+
+  tasks:
+    - name: Display operation summary
+      debug:
+        msg:
+          - "╔════════════════════════════════════════════════════════════╗"
+          - "║          CREATE PROXMOX RESOURCE POOLS                    ║"
+          - "╚════════════════════════════════════════════════════════════╝"
+          - ""
+          - "This playbook will create {{ resource_pools | length }} resource pools:"
+          - "{% for pool in resource_pools %}  • {{ pool.poolid }}: {{ pool.comment }}{% endfor %}"
+          - ""
+          - "Proxmox Host: {{ proxmox_api_host }}"
+          - "API User: {{ proxmox_api_user }}"
+          - ""
+
+    # ========================================================================
+    # Check existing pools
+    # ========================================================================
+
+    - name: Get existing resource pools
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/pools"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: existing_pools
+
+    - name: Extract existing pool IDs
+      set_fact:
+        existing_pool_ids: "{{ existing_pools.json.data | map(attribute='poolid') | list }}"
+
+    - name: Display existing pools
+      debug:
+        msg:
+          - "Current resource pools: {{ existing_pool_ids | length }}"
+          - "{% for poolid in existing_pool_ids %}  • {{ poolid }}{% endfor %}"
+      when: existing_pool_ids | length > 0
+
+    - name: Display no existing pools message
+      debug:
+        msg: "No resource pools currently exist. All pools will be created."
+      when: existing_pool_ids | length == 0
+
+    # ========================================================================
+    # Create resource pools
+    # ========================================================================
+
+    - name: Create resource pool
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/pools"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+          Content-Type: "application/x-www-form-urlencoded"
+        body_format: form-urlencoded
+        body:
+          poolid: "{{ item.poolid }}"
+          comment: "{{ item.comment }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        status_code: [200, 500]  # 500 if pool already exists
+        return_content: yes
+      register: pool_creation
+      loop: "{{ resource_pools }}"
+      loop_control:
+        label: "{{ item.poolid }}"
+      when: item.poolid not in existing_pool_ids
+      failed_when:
+        - pool_creation.status == 500
+        - "'already exists' not in (pool_creation.content | default(''))"
+
+    - name: Display pool creation results
+      debug:
+        msg: |
+          {% if item.poolid in existing_pool_ids %}
+          ⊘ SKIPPED: Pool '{{ item.poolid }}' already exists
+          {% elif item.item is defined %}
+          ✓ CREATED: Pool '{{ item.item.poolid }}' - {{ item.item.comment }}
+          {% endif %}
+      loop: "{{ pool_creation.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.poolid if item.item is defined else 'N/A' }}"
+      when: pool_creation.results is defined
+
+    - name: Display skipped pools
+      debug:
+        msg: "⊘ SKIPPED: Pool '{{ item.poolid }}' already exists"
+      loop: "{{ resource_pools }}"
+      loop_control:
+        label: "{{ item.poolid }}"
+      when: item.poolid in existing_pool_ids
+
+    # ========================================================================
+    # Verify pools were created
+    # ========================================================================
+
+    - name: Get updated pool list
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/pools"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: final_pools
+
+    - name: Extract final pool IDs
+      set_fact:
+        final_pool_ids: "{{ final_pools.json.data | map(attribute='poolid') | list }}"
+
+    # ========================================================================
+    # Final summary
+    # ========================================================================
+
+    - name: Display final summary
+      debug:
+        msg: |
+
+          ╔════════════════════════════════════════════════════════════╗
+          ║              OPERATION COMPLETE                           ║
+          ╚════════════════════════════════════════════════════════════╝
+
+          Resource Pools Summary:
+            Total pools now: {{ final_pool_ids | length }}
+
+          Pools created/verified:
+          {% for pool in resource_pools %}
+            {% if pool.poolid in final_pool_ids %}✓{% else %}✗{% endif %} {{ pool.poolid }} - {{ pool.comment }}
+          {% endfor %}
+
+          Next Steps:
+            1. Assign VMs to appropriate pools using Proxmox UI or automation
+            2. Configure permissions per pool for delegated administration
+            3. Use pools in backup job configurations
+            4. Monitor resource usage by pool
+
+          View pools in Proxmox UI:
+            Datacenter → Resource Pools
+
+    - name: Fail if any required pools are missing
+      fail:
+        msg: |
+          ERROR: Not all required pools were created successfully!
+          Missing pools: {{ resource_pools | map(attribute='poolid') | difference(final_pool_ids) | list }}
+      when: resource_pools | map(attribute='poolid') | difference(final_pool_ids) | list | length > 0
