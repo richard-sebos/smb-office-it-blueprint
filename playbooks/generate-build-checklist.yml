@@ -1,0 +1,798 @@
+---
+################################################################################
+# Playbook: generate-build-checklist.yml
+# Purpose: Analyze Proxmox infrastructure and generate build completion checklist
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-27
+# Version: 1.0
+#
+# Description:
+#   Discovers current Proxmox state and generates a comprehensive checklist of
+#   tasks needed to complete the infrastructure build according to best practices.
+#
+#   Analyzes:
+#   - Network configuration and required VLANs
+#   - VM templates needed
+#   - Missing VMs that need to be created
+#   - Resource pool organization
+#   - Firewall rules on Proxmox host
+#   - Storage configuration
+#   - Backup configuration
+#   - High availability setup
+#
+# Usage:
+#   ansible-playbook playbooks/generate-build-checklist.yml
+#
+# Output:
+#   - Console checklist with priorities
+#   - Markdown checklist: /tmp/proxmox-build-checklist-<timestamp>.md
+#   - JSON data: /tmp/proxmox-build-checklist-<timestamp>.json
+#
+################################################################################
+
+- name: Generate Proxmox Build Completion Checklist
+  hosts: localhost
+  gather_facts: yes
+  connection: local
+
+  vars:
+    timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    report_dir: "/tmp"
+
+    # Expected infrastructure from SMB Office IT Blueprint
+    expected_vlans:
+      - vlan_id: 10
+        name: "Management"
+        network: "192.168.10.0/24"
+        purpose: "Infrastructure management and monitoring"
+      - vlan_id: 20
+        name: "Servers"
+        network: "192.168.20.0/24"
+        purpose: "Production application servers"
+      - vlan_id: 30
+        name: "Workstations"
+        network: "192.168.30.0/24"
+        purpose: "Employee workstations and devices"
+      - vlan_id: 40
+        name: "Guest/IoT"
+        network: "192.168.40.0/24"
+        purpose: "Guest WiFi and IoT devices"
+      - vlan_id: 50
+        name: "DMZ"
+        network: "192.168.50.0/24"
+        purpose: "Public-facing services"
+
+    expected_templates:
+      - name: "ubuntu-2204-template"
+        os: "Ubuntu 22.04 LTS"
+        purpose: "Base template for Ubuntu servers"
+        vmid_range: "9000-9099"
+      - name: "debian-12-template"
+        os: "Debian 12"
+        purpose: "Base template for Debian servers"
+        vmid_range: "9100-9199"
+      - name: "rocky-9-template"
+        os: "Rocky Linux 9"
+        purpose: "Base template for RHEL-compatible servers"
+        vmid_range: "9200-9299"
+
+    expected_vms:
+      - vmid: 100
+        name: "pfsense-firewall"
+        vlan: 10
+        purpose: "Main firewall and router"
+        cpus: 2
+        memory: 4096
+        disk: 32
+      - vmid: 110
+        name: "project-ansible-server"
+        vlan: 10
+        purpose: "Infrastructure automation server"
+        cpus: 2
+        memory: 4096
+        disk: 100
+      - vmid: 120
+        name: "monitoring-server"
+        vlan: 10
+        purpose: "Prometheus, Grafana, monitoring stack"
+        cpus: 4
+        memory: 8192
+        disk: 200
+      - vmid: 200
+        name: "domain-controller"
+        vlan: 20
+        purpose: "Active Directory / LDAP"
+        cpus: 2
+        memory: 4096
+        disk: 100
+      - vmid: 210
+        name: "file-server"
+        vlan: 20
+        purpose: "Network file storage (Samba/NFS)"
+        cpus: 4
+        memory: 8192
+        disk: 500
+      - vmid: 220
+        name: "backup-server"
+        vlan: 20
+        purpose: "Backup and disaster recovery"
+        cpus: 2
+        memory: 4096
+        disk: 1000
+      - vmid: 230
+        name: "application-server-1"
+        vlan: 20
+        purpose: "Business applications"
+        cpus: 4
+        memory: 8192
+        disk: 200
+      - vmid: 300
+        name: "web-server"
+        vlan: 50
+        purpose: "Public web server (reverse proxy)"
+        cpus: 2
+        memory: 4096
+        disk: 50
+      - vmid: 310
+        name: "mail-server"
+        vlan: 50
+        purpose: "Email server"
+        cpus: 2
+        memory: 4096
+        disk: 100
+
+    expected_pools:
+      - name: "infrastructure"
+        comment: "Core infrastructure services"
+        vms: [100, 110, 120]
+      - name: "production"
+        comment: "Production application servers"
+        vms: [200, 210, 220, 230]
+      - name: "dmz"
+        comment: "DMZ and public-facing services"
+        vms: [300, 310]
+
+    required_firewall_rules:
+      - port: 8006
+        protocol: "tcp"
+        source: "192.168.10.0/24"
+        description: "Proxmox Web UI (Management VLAN only)"
+      - port: 22
+        protocol: "tcp"
+        source: "192.168.10.0/24"
+        description: "SSH access (Management VLAN only)"
+      - port: 3128
+        protocol: "tcp"
+        source: "any"
+        description: "Proxmox SPICE proxy"
+      - port: 5900-5999
+        protocol: "tcp"
+        source: "192.168.10.0/24"
+        description: "VNC console access"
+
+  tasks:
+    # ========================================================================
+    # Discover Current State
+    # ========================================================================
+
+    - name: Get Proxmox version
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/version"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_version
+
+    - name: Get cluster nodes
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_nodes
+
+    - name: Get all VMs
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ item.node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_vms_raw
+      loop: "{{ pve_nodes.json.data }}"
+      loop_control:
+        label: "{{ item.node }}"
+
+    - name: Flatten VM list
+      set_fact:
+        all_vms: "{{ pve_vms_raw.results | map(attribute='json.data') | flatten }}"
+
+    - name: Get network configuration
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/network"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_network
+
+    - name: Get storage configuration
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/storage"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_storage
+
+    - name: Get resource pools
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/pools"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_pools
+
+    - name: Get firewall configuration
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/firewall/options"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs }}"
+        return_content: yes
+      register: pve_firewall
+      failed_when: false
+
+    # ========================================================================
+    # Analyze Infrastructure Gaps
+    # ========================================================================
+
+    - name: Identify existing templates
+      set_fact:
+        existing_templates: "{{ all_vms | selectattr('template', 'defined') | selectattr('template', 'equalto', 1) | map(attribute='name') | list }}"
+
+    - name: Identify missing templates
+      set_fact:
+        missing_templates: "{{ expected_templates | rejectattr('name', 'in', existing_templates) | list }}"
+
+    - name: Identify existing VMs by VMID
+      set_fact:
+        existing_vmids: "{{ all_vms | map(attribute='vmid') | list }}"
+
+    - name: Identify missing VMs
+      set_fact:
+        missing_vms: "{{ expected_vms | rejectattr('vmid', 'in', existing_vmids) | list }}"
+
+    - name: Identify existing resource pools
+      set_fact:
+        existing_pool_names: "{{ pve_pools.json.data | map(attribute='poolid') | list }}"
+
+    - name: Identify missing resource pools
+      set_fact:
+        missing_pools: "{{ expected_pools | rejectattr('name', 'in', existing_pool_names) | list }}"
+
+    - name: Check for VLAN-aware bridge
+      set_fact:
+        vlan_bridges: "{{ pve_network.json.data | selectattr('type', 'equalto', 'bridge') | selectattr('bridge_vlan_aware', 'defined') | selectattr('bridge_vlan_aware', 'equalto', 1) | list }}"
+
+    - name: Analyze network configuration gaps
+      set_fact:
+        network_tasks:
+          - task: "Configure VLAN-aware bridge"
+            status: "{{ 'complete' if vlan_bridges | length > 0 else 'needed' }}"
+            priority: "high"
+            details: "{{ 'Bridge ' + vlan_bridges[0].iface + ' is VLAN-aware' if vlan_bridges | length > 0 else 'No VLAN-aware bridge found. Need to configure vmbr0 or create new bridge.' }}"
+          - task: "Create VLAN interfaces for management"
+            status: "needed"
+            priority: "high"
+            details: "Create vmbr0.10, vmbr0.20, vmbr0.30, vmbr0.40, vmbr0.50 for network segmentation"
+
+    # ========================================================================
+    # Generate Checklist
+    # ========================================================================
+
+    - name: Build comprehensive checklist
+      set_fact:
+        build_checklist:
+          infrastructure_info:
+            proxmox_version: "{{ pve_version.json.data.version }}"
+            node_count: "{{ pve_nodes.json.data | length }}"
+            existing_vms: "{{ all_vms | length }}"
+            existing_templates: "{{ existing_templates | length }}"
+            analysis_time: "{{ ansible_date_time.iso8601 }}"
+
+          phase1_network:
+            name: "Phase 1: Network Configuration"
+            priority: "CRITICAL"
+            description: "Configure network segmentation and VLANs before creating VMs"
+            tasks:
+              - item: "Enable VLAN awareness on primary bridge (vmbr0)"
+                command: "Edit /etc/network/interfaces or use Proxmox UI"
+                status: "{{ 'DONE' if vlan_bridges | length > 0 else 'TODO' }}"
+                details: "Set bridge-vlan-aware yes on vmbr0"
+              - item: "Create VLAN {{ expected_vlans[0].vlan_id }} - {{ expected_vlans[0].name }}"
+                command: "Create vmbr0.{{ expected_vlans[0].vlan_id }} with IP {{ expected_vlans[0].network | regex_replace('/.*', '.1/24') }}"
+                status: "TODO"
+                details: "{{ expected_vlans[0].purpose }}"
+              - item: "Create VLAN {{ expected_vlans[1].vlan_id }} - {{ expected_vlans[1].name }}"
+                command: "Create vmbr0.{{ expected_vlans[1].vlan_id }} with IP {{ expected_vlans[1].network | regex_replace('/.*', '.1/24') }}"
+                status: "TODO"
+                details: "{{ expected_vlans[1].purpose }}"
+              - item: "Create VLAN {{ expected_vlans[2].vlan_id }} - {{ expected_vlans[2].name }}"
+                command: "Create vmbr0.{{ expected_vlans[2].vlan_id }} (no IP needed)"
+                status: "TODO"
+                details: "{{ expected_vlans[2].purpose }}"
+              - item: "Create VLAN {{ expected_vlans[3].vlan_id }} - {{ expected_vlans[3].name }}"
+                command: "Create vmbr0.{{ expected_vlans[3].vlan_id }} (no IP needed)"
+                status: "TODO"
+                details: "{{ expected_vlans[3].purpose }}"
+              - item: "Create VLAN {{ expected_vlans[4].vlan_id }} - {{ expected_vlans[4].name }}"
+                command: "Create vmbr0.{{ expected_vlans[4].vlan_id }} (no IP needed)"
+                status: "TODO"
+                details: "{{ expected_vlans[4].purpose }}"
+              - item: "Test VLAN connectivity"
+                command: "Ping tests between VLANs through firewall"
+                status: "TODO"
+                details: "Verify network segmentation is working"
+
+          phase2_templates:
+            name: "Phase 2: VM Templates"
+            priority: "HIGH"
+            description: "Create base VM templates for rapid deployment"
+            tasks: "{{ missing_templates | map('combine', {'status': 'TODO'}) | list }}"
+
+          phase3_firewall:
+            name: "Phase 3: Proxmox Host Firewall"
+            priority: "HIGH"
+            description: "Secure Proxmox host with firewall rules"
+            tasks:
+              - item: "Enable Proxmox host firewall"
+                command: "Datacenter > Firewall > Options > Enable"
+                status: "TODO"
+                details: "Enable firewall on Proxmox host level"
+              - item: "Create firewall rule: Proxmox Web UI (8006/tcp)"
+                command: "Allow from 192.168.10.0/24 to 8006/tcp"
+                status: "TODO"
+                details: "{{ required_firewall_rules[0].description }}"
+              - item: "Create firewall rule: SSH (22/tcp)"
+                command: "Allow from 192.168.10.0/24 to 22/tcp"
+                status: "TODO"
+                details: "{{ required_firewall_rules[1].description }}"
+              - item: "Create firewall rule: SPICE Proxy (3128/tcp)"
+                command: "Allow from any to 3128/tcp"
+                status: "TODO"
+                details: "{{ required_firewall_rules[2].description }}"
+              - item: "Create firewall rule: VNC Console (5900-5999/tcp)"
+                command: "Allow from 192.168.10.0/24 to 5900-5999/tcp"
+                status: "TODO"
+                details: "{{ required_firewall_rules[3].description }}"
+              - item: "Set default firewall policy to DROP"
+                command: "Set INPUT policy to DROP"
+                status: "TODO"
+                details: "Drop all traffic not explicitly allowed"
+              - item: "Test firewall rules"
+                command: "Verify access from management network only"
+                status: "TODO"
+                details: "Ensure Web UI accessible only from VLAN 10"
+
+          phase4_pools:
+            name: "Phase 4: Resource Pools"
+            priority: "MEDIUM"
+            description: "Organize VMs into logical resource pools"
+            tasks: "{{ missing_pools | map('combine', {'status': 'TODO'}) | list }}"
+
+          phase5_vms:
+            name: "Phase 5: Virtual Machines"
+            priority: "HIGH"
+            description: "Create production VMs according to infrastructure plan"
+            tasks: "{{ missing_vms | map('combine', {'status': 'TODO'}) | list }}"
+
+          phase6_storage:
+            name: "Phase 6: Storage Configuration"
+            priority: "MEDIUM"
+            description: "Configure additional storage for VMs and backups"
+            tasks:
+              - item: "Configure backup storage location"
+                command: "Add NFS/CIFS share or local directory for backups"
+                status: "TODO"
+                details: "Dedicated storage for Proxmox VE backups"
+              - item: "Configure ISO storage"
+                command: "Add directory or NFS share for ISO images"
+                status: "TODO"
+                details: "Central location for OS installation ISOs"
+              - item: "Set up VM disk storage"
+                command: "Configure LVM-thin or ZFS pool"
+                status: "TODO"
+                details: "Optimized storage for VM disks"
+
+          phase7_backup:
+            name: "Phase 7: Backup Configuration"
+            priority: "HIGH"
+            description: "Configure automated VM backups"
+            tasks:
+              - item: "Create backup schedule for critical VMs"
+                command: "Datacenter > Backup > Add"
+                status: "TODO"
+                details: "Daily backups of VMs 100, 110, 200, 210"
+              - item: "Configure backup retention policy"
+                command: "Set retention to keep 7 daily, 4 weekly, 3 monthly"
+                status: "TODO"
+                details: "Balance storage usage with recovery options"
+              - item: "Test backup and restore process"
+                command: "Perform test restore of a VM"
+                status: "TODO"
+                details: "Verify backups are functional"
+
+          phase8_monitoring:
+            name: "Phase 8: Monitoring & Alerts"
+            priority: "MEDIUM"
+            description: "Set up monitoring and alerting"
+            tasks:
+              - item: "Configure email notifications"
+                command: "Datacenter > Notifications > Add Email"
+                status: "TODO"
+                details: "Email alerts for system issues"
+              - item: "Set up Proxmox VE subscription or community repo"
+                command: "Configure APT repository for updates"
+                status: "TODO"
+                details: "Enable system updates"
+              - item: "Configure resource usage alerts"
+                command: "Set thresholds for CPU, memory, disk usage"
+                status: "TODO"
+                details: "Proactive monitoring of resource exhaustion"
+
+          summary:
+            total_phases: 8
+            critical_tasks: "{{ (network_tasks | selectattr('priority', 'equalto', 'high') | list | length) + (missing_templates | length) }}"
+            missing_templates_count: "{{ missing_templates | length }}"
+            missing_vms_count: "{{ missing_vms | length }}"
+            missing_pools_count: "{{ missing_pools | length }}"
+            estimated_hours: "{{ 4 + (missing_templates | length * 2) + (missing_vms | length * 0.5) }}"
+
+    # ========================================================================
+    # Display Checklist
+    # ========================================================================
+
+    - name: Display checklist header
+      debug:
+        msg: |
+
+          ╔════════════════════════════════════════════════════════════════════╗
+          ║     PROXMOX INFRASTRUCTURE BUILD COMPLETION CHECKLIST             ║
+          ╚════════════════════════════════════════════════════════════════════╝
+
+          Generated: {{ ansible_date_time.iso8601 }}
+          Proxmox VE: {{ pve_version.json.data.version }}
+
+          Summary:
+            • Total Phases: {{ build_checklist.summary.total_phases }}
+            • Missing Templates: {{ build_checklist.summary.missing_templates_count }}
+            • Missing VMs: {{ build_checklist.summary.missing_vms_count }}
+            • Missing Resource Pools: {{ build_checklist.summary.missing_pools_count }}
+
+    - name: Display Phase 1 - Network
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase1_network.name }}
+          Priority: {{ build_checklist.phase1_network.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase1_network.description }}
+
+          {% for task in build_checklist.phase1_network.tasks %}
+          [{{ task.status }}] {{ task.item }}
+               → {{ task.command }}
+               ℹ {{ task.details }}
+          {% endfor %}
+
+    - name: Display Phase 2 - Templates
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase2_templates.name }}
+          Priority: {{ build_checklist.phase2_templates.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase2_templates.description }}
+
+          {% if build_checklist.phase2_templates.tasks | length > 0 %}
+          {% for template in build_checklist.phase2_templates.tasks %}
+          [{{ template.status }}] Create template: {{ template.name }}
+               → OS: {{ template.os }}
+               → VMID Range: {{ template.vmid_range }}
+               ℹ {{ template.purpose }}
+          {% endfor %}
+          {% else %}
+          ✓ All required templates exist
+          {% endif %}
+
+    - name: Display Phase 3 - Firewall
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase3_firewall.name }}
+          Priority: {{ build_checklist.phase3_firewall.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase3_firewall.description }}
+
+          {% for task in build_checklist.phase3_firewall.tasks %}
+          [{{ task.status }}] {{ task.item }}
+               → {{ task.command }}
+               ℹ {{ task.details }}
+          {% endfor %}
+
+    - name: Display Phase 4 - Resource Pools
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase4_pools.name }}
+          Priority: {{ build_checklist.phase4_pools.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase4_pools.description }}
+
+          {% if build_checklist.phase4_pools.tasks | length > 0 %}
+          {% for pool in build_checklist.phase4_pools.tasks %}
+          [{{ pool.status }}] Create pool: {{ pool.name }}
+               → Comment: {{ pool.comment }}
+               → VMs: {{ pool.vms | join(', ') }}
+          {% endfor %}
+          {% else %}
+          ✓ All required resource pools exist
+          {% endif %}
+
+    - name: Display Phase 5 - Virtual Machines
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase5_vms.name }}
+          Priority: {{ build_checklist.phase5_vms.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase5_vms.description }}
+
+          {% if build_checklist.phase5_vms.tasks | length > 0 %}
+          {% for vm in build_checklist.phase5_vms.tasks %}
+          [{{ vm.status }}] Create VM {{ vm.vmid }}: {{ vm.name }}
+               → VLAN: {{ vm.vlan }}
+               → Resources: {{ vm.cpus }} CPUs, {{ (vm.memory / 1024) | round(1) }}GB RAM, {{ vm.disk }}GB disk
+               ℹ {{ vm.purpose }}
+          {% endfor %}
+          {% else %}
+          ✓ All required VMs exist
+          {% endif %}
+
+    - name: Display Phase 6 - Storage
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase6_storage.name }}
+          Priority: {{ build_checklist.phase6_storage.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase6_storage.description }}
+
+          {% for task in build_checklist.phase6_storage.tasks %}
+          [{{ task.status }}] {{ task.item }}
+               → {{ task.command }}
+               ℹ {{ task.details }}
+          {% endfor %}
+
+    - name: Display Phase 7 - Backup
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase7_backup.name }}
+          Priority: {{ build_checklist.phase7_backup.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase7_backup.description }}
+
+          {% for task in build_checklist.phase7_backup.tasks %}
+          [{{ task.status }}] {{ task.item }}
+               → {{ task.command }}
+               ℹ {{ task.details }}
+          {% endfor %}
+
+    - name: Display Phase 8 - Monitoring
+      debug:
+        msg: |
+
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase8_monitoring.name }}
+          Priority: {{ build_checklist.phase8_monitoring.priority }}
+          ═══════════════════════════════════════════════════════════════════
+          {{ build_checklist.phase8_monitoring.description }}
+
+          {% for task in build_checklist.phase8_monitoring.tasks %}
+          [{{ task.status }}] {{ task.item }}
+               → {{ task.command }}
+               ℹ {{ task.details }}
+          {% endfor %}
+
+    # ========================================================================
+    # Save Reports
+    # ========================================================================
+
+    - name: Save checklist as JSON
+      copy:
+        content: "{{ build_checklist | to_nice_json }}"
+        dest: "{{ report_dir }}/proxmox-build-checklist-{{ timestamp }}.json"
+
+    - name: Generate Markdown checklist
+      copy:
+        content: |
+          # Proxmox Infrastructure Build Completion Checklist
+
+          **Generated:** {{ ansible_date_time.iso8601 }}
+          **Proxmox Version:** {{ pve_version.json.data.version }}
+
+          ## Summary
+
+          - **Total Phases:** {{ build_checklist.summary.total_phases }}
+          - **Missing Templates:** {{ build_checklist.summary.missing_templates_count }}
+          - **Missing VMs:** {{ build_checklist.summary.missing_vms_count }}
+          - **Missing Resource Pools:** {{ build_checklist.summary.missing_pools_count }}
+
+          ---
+
+          ## {{ build_checklist.phase1_network.name }}
+          **Priority:** {{ build_checklist.phase1_network.priority }}
+
+          {{ build_checklist.phase1_network.description }}
+
+          {% for task in build_checklist.phase1_network.tasks %}
+          - [ ] **{{ task.item }}**
+            - Command: `{{ task.command }}`
+            - Details: {{ task.details }}
+            - Status: {{ task.status }}
+
+          {% endfor %}
+
+          ---
+
+          ## {{ build_checklist.phase2_templates.name }}
+          **Priority:** {{ build_checklist.phase2_templates.priority }}
+
+          {{ build_checklist.phase2_templates.description }}
+
+          {% if build_checklist.phase2_templates.tasks | length > 0 %}
+          {% for template in build_checklist.phase2_templates.tasks %}
+          - [ ] **Create template: {{ template.name }}**
+            - OS: {{ template.os }}
+            - VMID Range: {{ template.vmid_range }}
+            - Purpose: {{ template.purpose }}
+
+          {% endfor %}
+          {% else %}
+          - [x] All required templates exist
+          {% endif %}
+
+          ---
+
+          ## {{ build_checklist.phase3_firewall.name }}
+          **Priority:** {{ build_checklist.phase3_firewall.priority }}
+
+          {{ build_checklist.phase3_firewall.description }}
+
+          {% for task in build_checklist.phase3_firewall.tasks %}
+          - [ ] **{{ task.item }}**
+            - Command: `{{ task.command }}`
+            - Details: {{ task.details }}
+
+          {% endfor %}
+
+          ---
+
+          ## {{ build_checklist.phase4_pools.name }}
+          **Priority:** {{ build_checklist.phase4_pools.priority }}
+
+          {{ build_checklist.phase4_pools.description }}
+
+          {% if build_checklist.phase4_pools.tasks | length > 0 %}
+          {% for pool in build_checklist.phase4_pools.tasks %}
+          - [ ] **Create pool: {{ pool.name }}**
+            - Comment: {{ pool.comment }}
+            - VMs: {{ pool.vms | join(', ') }}
+
+          {% endfor %}
+          {% else %}
+          - [x] All required resource pools exist
+          {% endif %}
+
+          ---
+
+          ## {{ build_checklist.phase5_vms.name }}
+          **Priority:** {{ build_checklist.phase5_vms.priority }}
+
+          {{ build_checklist.phase5_vms.description }}
+
+          {% if build_checklist.phase5_vms.tasks | length > 0 %}
+          {% for vm in build_checklist.phase5_vms.tasks %}
+          - [ ] **Create VM {{ vm.vmid }}: {{ vm.name }}**
+            - VLAN: {{ vm.vlan }}
+            - Resources: {{ vm.cpus }} CPUs, {{ (vm.memory / 1024) | round(1) }}GB RAM, {{ vm.disk }}GB disk
+            - Purpose: {{ vm.purpose }}
+
+          {% endfor %}
+          {% else %}
+          - [x] All required VMs exist
+          {% endif %}
+
+          ---
+
+          ## {{ build_checklist.phase6_storage.name }}
+          **Priority:** {{ build_checklist.phase6_storage.priority }}
+
+          {{ build_checklist.phase6_storage.description }}
+
+          {% for task in build_checklist.phase6_storage.tasks %}
+          - [ ] **{{ task.item }}**
+            - Command: `{{ task.command }}`
+            - Details: {{ task.details }}
+
+          {% endfor %}
+
+          ---
+
+          ## {{ build_checklist.phase7_backup.name }}
+          **Priority:** {{ build_checklist.phase7_backup.priority }}
+
+          {{ build_checklist.phase7_backup.description }}
+
+          {% for task in build_checklist.phase7_backup.tasks %}
+          - [ ] **{{ task.item }}**
+            - Command: `{{ task.command }}`
+            - Details: {{ task.details }}
+
+          {% endfor %}
+
+          ---
+
+          ## {{ build_checklist.phase8_monitoring.name }}
+          **Priority:** {{ build_checklist.phase8_monitoring.priority }}
+
+          {{ build_checklist.phase8_monitoring.description }}
+
+          {% for task in build_checklist.phase8_monitoring.tasks %}
+          - [ ] **{{ task.item }}**
+            - Command: `{{ task.command }}`
+            - Details: {{ task.details }}
+
+          {% endfor %}
+
+          ---
+
+          **End of Checklist**
+        dest: "{{ report_dir }}/proxmox-build-checklist-{{ timestamp }}.md"
+
+    - name: Display final summary
+      debug:
+        msg: |
+
+          ╔════════════════════════════════════════════════════════════════════╗
+          ║              CHECKLIST GENERATION COMPLETE                        ║
+          ╚════════════════════════════════════════════════════════════════════╝
+
+          Reports saved:
+            • Markdown: {{ report_dir }}/proxmox-build-checklist-{{ timestamp }}.md
+            • JSON: {{ report_dir }}/proxmox-build-checklist-{{ timestamp }}.json
+
+          Next Steps:
+            1. Review the checklist phases in priority order
+            2. Start with Phase 1 (Network) - this is critical foundation
+            3. Complete Phase 2 (Templates) before creating VMs
+            4. Secure with Phase 3 (Firewall) as early as possible
+            5. Track progress by checking off items in the Markdown file
