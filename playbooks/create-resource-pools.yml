@@ -140,18 +140,17 @@
         - "'already exists' not in (pool_creation.content | default(''))"
       no_log: true
 
-    - name: Display pool creation results
+    - name: Display created pools
       debug:
-        msg: |
-          {% if item.poolid in existing_pool_ids %}
-          ⊘ SKIPPED: Pool '{{ item.poolid }}' already exists
-          {% elif item.item is defined %}
-          ✓ CREATED: Pool '{{ item.item.poolid }}' - {{ item.item.comment }}
-          {% endif %}
+        msg: "✓ CREATED: Pool '{{ item.item.poolid }}' - {{ item.item.comment }}"
       loop: "{{ pool_creation.results | default([]) }}"
       loop_control:
         label: "{{ item.item.poolid if item.item is defined else 'N/A' }}"
-      when: pool_creation.results is defined
+      when:
+        - pool_creation.results is defined
+        - item.item is defined
+        - item.status is defined
+        - item.status == 200
 
     - name: Display skipped pools
       debug:
