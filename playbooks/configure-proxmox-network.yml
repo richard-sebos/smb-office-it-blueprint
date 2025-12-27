@@ -56,7 +56,8 @@
 
   vars:
     proxmox_ssh_user: "root"
-    backup_dir: "/opt/project-ansible/backups/network"
+    proxmox_ssh_key: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519"
+    backup_dir: "{{ lookup('env', 'HOME') }}/Documents/claude/projects/smb-office-it-blueprint/backups/network"
 
     # VLAN configuration according to SMB Office IT Blueprint
     vlans:
@@ -141,7 +142,7 @@
     # ========================================================================
 
     - name: Check if we can SSH to Proxmox host
-      command: "ssh -o ConnectTimeout=5 -o BatchMode=yes {{ proxmox_ssh_user }}@{{ proxmox_api_host }} echo 'OK'"
+      shell: "ssh -i {{ proxmox_ssh_key }} -o ConnectTimeout=5 -o StrictHostKeyChecking=no {{ proxmox_ssh_user }}@{{ proxmox_api_host }} 'echo OK'"
       register: ssh_test
       failed_when: false
       changed_when: false
@@ -152,17 +153,21 @@
         msg: |
           Cannot SSH to Proxmox host: {{ proxmox_api_host }}
 
+          SSH test result: {{ ssh_test.stdout | default('No output') }}
+          Error: {{ ssh_test.stderr | default('No error') }}
+          Return code: {{ ssh_test.rc }}
+
           Please ensure:
           1. SSH key authentication is set up for {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
           2. Host is reachable on the network
 
-          To set up SSH key authentication:
-            ssh-copy-id {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
+          Debug: Try manually running:
+            ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }} 'echo OK'
       when: ssh_test.rc != 0
 
     - name: Backup current /etc/network/interfaces
-      command: >
-        ssh {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
+      shell: >
+        ssh -i {{ proxmox_ssh_key }} {{ proxmox_ssh_user }}@{{ proxmox_api_host }}
         'cat /etc/network/interfaces'
       register: original_network_config
       changed_when: false
