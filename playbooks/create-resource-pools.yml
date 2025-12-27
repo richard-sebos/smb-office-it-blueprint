@@ -72,9 +72,13 @@
         return_content: yes
       register: existing_pools
 
+    - name: Parse JSON response
+      set_fact:
+        existing_pools_data: "{{ (existing_pools.content | from_json).data }}"
+
     - name: Extract existing pool IDs
       set_fact:
-        existing_pool_ids: "{{ existing_pools.json.data | map(attribute='poolid') | list }}"
+        existing_pool_ids: "{{ existing_pools_data | map(attribute='poolid') | list }}"
 
     - name: Display existing pools
       debug:
@@ -150,9 +154,13 @@
         return_content: yes
       register: final_pools
 
+    - name: Parse final JSON response
+      set_fact:
+        final_pools_data: "{{ (final_pools.content | from_json).data }}"
+
     - name: Extract final pool IDs
       set_fact:
-        final_pool_ids: "{{ final_pools.json.data | map(attribute='poolid') | list }}"
+        final_pool_ids: "{{ final_pools_data | map(attribute='poolid') | list }}"
 
     # ========================================================================
     # Final summary
