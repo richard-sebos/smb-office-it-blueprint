@@ -71,14 +71,15 @@
         validate_certs: "{{ proxmox_api_validate_certs }}"
         return_content: yes
       register: existing_pools
+      no_log: true
 
     - name: Parse JSON response
       set_fact:
-        existing_pools_data: "{{ (existing_pools.content | from_json).data }}"
+        existing_pools_data: "{{ existing_pools.json.data if existing_pools.json is defined else (existing_pools.content | from_json).data }}"
 
     - name: Extract existing pool IDs
       set_fact:
-        existing_pool_ids: "{{ existing_pools_data | map(attribute='poolid') | list }}"
+        existing_pool_ids: "{{ existing_pools_data | map(attribute='poolid') | list | default([]) }}"
 
     - name: Display existing pools
       debug:
@@ -118,6 +119,7 @@
       failed_when:
         - pool_creation.status == 500
         - "'already exists' not in (pool_creation.content | default(''))"
+      no_log: true
 
     - name: Display pool creation results
       debug:
@@ -153,14 +155,15 @@
         validate_certs: "{{ proxmox_api_validate_certs }}"
         return_content: yes
       register: final_pools
+      no_log: true
 
     - name: Parse final JSON response
       set_fact:
-        final_pools_data: "{{ (final_pools.content | from_json).data }}"
+        final_pools_data: "{{ final_pools.json.data if final_pools.json is defined else (final_pools.content | from_json).data }}"
 
     - name: Extract final pool IDs
       set_fact:
-        final_pool_ids: "{{ final_pools_data | map(attribute='poolid') | list }}"
+        final_pool_ids: "{{ final_pools_data | map(attribute='poolid') | list | default([]) }}"
 
     # ========================================================================
     # Final summary
