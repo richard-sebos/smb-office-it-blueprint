@@ -572,16 +572,70 @@
         - always
         - configure
 
+    # ========================================================================
+    # Ensure Resource Pools Exist
+    # ========================================================================
+
+    - name: Get list of existing resource pools
+      shell: "pvesh get /pools --output-format json"
+      register: existing_pools_raw
+      changed_when: false
+
+    - name: Parse existing pools
+      set_fact:
+        existing_pool_ids: "{{ (existing_pools_raw.stdout | from_json) | map(attribute='poolid') | list }}"
+
+    - name: Display existing pools
+      debug:
+        msg: "Existing pools: {{ existing_pool_ids }}"
+
+    - name: Create missing resource pools
+      shell: |
+        pvesh create /pools --poolid {{ item }} --comment "Auto-created by deployment playbook"
+      loop:
+        - infrastructure
+        - production
+        - dmz
+      when: item not in existing_pool_ids
+      loop_control:
+        label: "Creating pool {{ item }}"
+
+    # ========================================================================
+    # Add VMs to Resource Pools
+    # ========================================================================
+
     - name: Add VMs to resource pools
       shell: |
         pvesh set /pools/{{ item.pool }} --vms {{ item.vmid }}
       loop: "{{ vms }}"
       loop_control:
         label: "Adding {{ item.name }} to pool {{ item.pool }}"
-      failed_when: false  # Pool might not exist yet
+      register: pool_assignment
+      failed_when:
+        - pool_assignment.rc != 0
+        - "'already exists' not in pool_assignment.stderr"
       tags:
         - always
         - configure
+
+    # ========================================================================
+    # Verification
+    # ========================================================================
+
+    - name: Verify tags were applied
+      shell: "qm config {{ item.vmid }} | grep '^tags:' || echo 'NO TAGS'"
+      loop: "{{ vms }}"
+      register: tag_verification
+      changed_when: false
+      loop_control:
+        label: "Verifying tags for {{ item.name }}"
+
+    - name: Display tag verification results
+      debug:
+        msg: "{{ item.item.name }} ({{ item.item.vmid }}): {{ item.stdout }}"
+      loop: "{{ tag_verification.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
 
     # ========================================================================
     # Post-Deployment Summary

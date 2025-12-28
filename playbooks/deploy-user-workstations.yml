@@ -1,0 +1,213 @@
+---
+################################################################################
+# Playbook: deploy-user-workstations.yml
+# Purpose: Deploy end-user workstation VMs
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-28
+#
+# Description:
+#   Deploys end-user workstation VMs on VLAN 130.
+#   Customize the number of workstations and naming scheme as needed.
+#
+# Usage:
+#   ansible-playbook playbooks/deploy-user-workstations.yml
+#
+#   # Customize variables
+#   ansible-playbook playbooks/deploy-user-workstations.yml \
+#     -e "num_workstations=5" \
+#     -e "workstation_base_vmid=310"
+################################################################################
+
+- name: Deploy End-User Workstations
+  hosts: pve
+  gather_facts: yes
+  become: yes
+
+  vars:
+    storage: "vmDrive"
+    domain: "corp.company.local"
+
+    # Customizable variables
+    num_workstations: 5  # Number of workstations to deploy
+    workstation_base_vmid: 310  # Starting VMID (310, 311, 312, etc.)
+    workstation_base_ip: 10.0.130.20  # Starting IP
+    workstation_template: 9000  # Ubuntu 22.04 (or use Windows template if you have one)
+
+    # Resource allocation per workstation
+    workstation_cores: 2
+    workstation_memory: 4096  # 4GB RAM
+    workstation_disk_size: "+90G"  # Expand to 100GB total
+
+    # VLAN configuration
+    workstation_vlan: 130
+    workstation_gateway: "10.0.130.1"
+    workstation_netmask: "24"
+
+  tasks:
+    - name: Generate workstation list
+      set_fact:
+        workstations: "{{ workstations | default([]) + [item] }}"
+      loop: "{{ range(0, num_workstations | int) | list }}"
+      vars:
+        item:
+          name: "ws-user{{ '%02d' | format(loop.index) }}"
+          vmid: "{{ workstation_base_vmid | int + loop.index - 1 }}"
+          ip: "{{ workstation_base_ip | ipmath(loop.index - 1) }}"
+          description: |
+            End-User Workstation {{ '%02d' | format(loop.index) }}
+
+            Purpose: Employee desktop for general office work
+            OS: Ubuntu 22.04 Desktop (or Windows)
+            Network: VLAN 130 (Workstations)
+
+            User: End user desktop
+            Created: {{ ansible_date_time.date }}
+
+    - name: Display deployment plan
+      debug:
+        msg: |
+          ========================================
+          END-USER WORKSTATION DEPLOYMENT
+          ========================================
+
+          Deploying {{ num_workstations }} workstations:
+
+          {% for ws in workstations %}
+          {{ loop.index }}. {{ ws.name }} (VM {{ ws.vmid }})
+             IP: {{ ws.ip }}/{{ workstation_netmask }}
+             Gateway: {{ workstation_gateway }}
+             VLAN: {{ workstation_vlan }}
+             Template: {{ workstation_template }}
+             Resources: {{ workstation_cores }} cores, {{ workstation_memory }}MB RAM
+          {% endfor %}
+
+          ========================================
+
+    - name: Check if VMs already exist
+      shell: "qm status {{ item.vmid }} 2>&1"
+      loop: "{{ workstations }}"
+      register: vm_existence_check
+      failed_when: false
+      changed_when: false
+
+    - name: Display existing VMs warning
+      debug:
+        msg: "WARNING: VM {{ item.item.vmid }} ({{ item.item.name }}) already exists!"
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+
+    - name: Fail if any VM already exists
+      fail:
+        msg: "VM {{ item.item.vmid }} already exists. Destroy it first."
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+      tags:
+        - validation
+
+    - name: Clone workstation VMs from template
+      shell: |
+        qm clone {{ workstation_template }} {{ item.vmid }} \
+          --name {{ item.name }} \
+          --full \
+          --storage {{ storage }}
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Cloning {{ item.name }} from template {{ workstation_template }}"
+
+    - name: Configure VM resources
+      shell: |
+        qm set {{ item.vmid }} \
+          --cores {{ workstation_cores }} \
+          --memory {{ workstation_memory }}
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Configuring resources for {{ item.name }}"
+
+    - name: Resize VM disks
+      shell: |
+        qm resize {{ item.vmid }} scsi0 {{ workstation_disk_size }}
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Resizing disk for {{ item.name }}"
+
+    - name: Configure VM network
+      shell: |
+        qm set {{ item.vmid }} \
+          --net0 virtio,bridge=vmbr1,tag={{ workstation_vlan }},firewall=0
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Configuring network for {{ item.name }}"
+
+    - name: Configure cloud-init
+      shell: |
+        qm set {{ item.vmid }} \
+          --ipconfig0 ip={{ item.ip }}/{{ workstation_netmask }},gw={{ workstation_gateway }} \
+          --nameserver {{ workstation_gateway }} \
+          --searchdomain {{ domain }}
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Configuring cloud-init for {{ item.name }}"
+
+    - name: Set VM description
+      shell: |
+        qm set {{ item.vmid }} --description "{{ item.description }}"
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Setting description for {{ item.name }}"
+
+    - name: Apply Proxmox tags
+      shell: |
+        qm set {{ item.vmid }} --tags "workstation;end-user;ubuntu;vlan-130;auto-update"
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Applying tags to {{ item.name }}"
+
+    - name: Add VMs to resource pool
+      shell: |
+        pvesh set /pools/production --vms {{ item.vmid }}
+      loop: "{{ workstations }}"
+      loop_control:
+        label: "Adding {{ item.name }} to pool"
+      failed_when: false
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ========================================
+          WORKSTATION DEPLOYMENT COMPLETE
+          ========================================
+
+          Deployed {{ num_workstations }} workstations:
+
+          {% for ws in workstations %}
+          ✓ {{ ws.name }} (VM {{ ws.vmid }}) - {{ ws.ip }}
+          {% endfor %}
+
+          ========================================
+          NEXT STEPS
+          ========================================
+
+          1. Start workstations:
+             {% for ws in workstations %}
+             qm start {{ ws.vmid }}  # {{ ws.name }}
+             {% endfor %}
+
+          2. Or start all at once:
+             for vmid in {% for ws in workstations %}{{ ws.vmid }} {% endfor %}; do qm start $vmid; done
+
+          3. Access via SSH (after started):
+             {% for ws in workstations %}
+             ssh ubuntu@{{ ws.ip }}  # {{ ws.name }}
+             {% endfor %}
+
+          4. Install desktop environment (if needed):
+             sudo apt update
+             sudo apt install ubuntu-desktop-minimal
+
+          5. Configure VNC or RDP access for remote desktop
+
+          ========================================
