@@ -310,7 +310,7 @@
       # ========================================================================
 
       - name: "web01"
-        vmid: 400
+        vmid: 450
         template: 9000  # Ubuntu 22.04
         cores: 2
         memory: 4096
@@ -697,7 +697,7 @@
              bash scripts/start-all-infrastructure.sh
 
           3. Verify VMs are running:
-             qm list | grep -E "110|111|112|113|200|201|210|220|230|240|300|400|410|420"
+             qm list | grep -E "110|111|112|113|200|201|210|220|230|240|300|410|420|450"
 
           4. Test connectivity (wait 60s after starting):
              {% for vm in vms %}
