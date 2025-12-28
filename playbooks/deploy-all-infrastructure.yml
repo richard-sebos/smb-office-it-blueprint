@@ -46,7 +46,7 @@
 
       - name: "ansible-ctrl"
         vmid: 110
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -69,7 +69,7 @@
 
       - name: "monitoring"
         vmid: 111
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -92,7 +92,7 @@
 
       - name: "backup"
         vmid: 112
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 4096
         disk_size: "+190G"  # Larger for backup storage
@@ -115,7 +115,7 @@
 
       - name: "jump-host"
         vmid: 113
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"
@@ -142,7 +142,7 @@
 
       - name: "dc01"
         vmid: 200
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -165,7 +165,7 @@
 
       - name: "dc02"
         vmid: 201
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -188,7 +188,7 @@
 
       - name: "fs01"
         vmid: 210
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 4
         memory: 8192
         disk_size: "+490G"  # Large storage for file server
@@ -211,7 +211,7 @@
 
       - name: "db01"
         vmid: 220
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 4
         memory: 8192
         disk_size: "+190G"
@@ -234,7 +234,7 @@
 
       - name: "app01"
         vmid: 230
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 4
         memory: 8192
         disk_size: "+90G"
@@ -257,7 +257,7 @@
 
       - name: "mail01"
         vmid: 240
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 4096
         disk_size: "+190G"
@@ -284,7 +284,7 @@
 
       - name: "ws-admin01"
         vmid: 300
-        template: 9000  # Ubuntu 22.04 (could be Windows template if available)
+        template: "{{ vm_templates.ubuntu }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -311,7 +311,7 @@
 
       - name: "web01"
         vmid: 450
-        template: 9000  # Ubuntu 22.04
+        template: "{{ vm_templates.ubuntu }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -334,7 +334,7 @@
 
       - name: "vpn-gw"
         vmid: 410
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"
@@ -357,7 +357,7 @@
 
       - name: "mail-relay"
         vmid: 420
-        template: 9100  # Debian 12
+        template: "{{ vm_templates.debian }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"

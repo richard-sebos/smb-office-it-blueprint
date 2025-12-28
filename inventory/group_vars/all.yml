@@ -1,0 +1,62 @@
+---
+################################################################################
+# Global Variables - SMB Office IT Blueprint
+# Purpose: Shared variables accessible to all hosts and playbooks
+# Last Updated: 2025-12-28
+################################################################################
+
+# ============================================================================
+# VM Template Mappings
+# ============================================================================
+# These map OS types to Proxmox template VMIDs
+# Update these VMIDs when you create new templates
+
+vm_templates:
+  ubuntu: 9000    # Ubuntu 22.04 LTS template
+  debian: 9100    # Debian 12 template
+  rocky: 9200     # Rocky Linux 9 template
+
+# ============================================================================
+# Infrastructure Settings
+# ============================================================================
+
+# Proxmox settings
+proxmox_node: "pve"
+proxmox_storage: "vmDrive"
+
+# Network settings
+dns_servers:
+  - "10.0.120.10"  # dc01
+  - "10.0.120.11"  # dc02
+
+ntp_servers:
+  - "10.0.120.10"  # dc01
+  - "10.0.120.11"  # dc02
+
+# Domain settings
+domain_name: "corp.company.local"
+domain_netbios: "CORP"
+
+# ============================================================================
+# Default VM Settings
+# ============================================================================
+
+# Cloud-init defaults
+default_vm_user: "ubuntu"
+default_vm_timezone: "America/New_York"
+
+# VM resource defaults
+default_vm_cores: 2
+default_vm_memory: 4096
+default_vm_disk_size: "32G"
+
+# Network defaults
+default_gateway: "10.0.110.1"  # OPNsense management interface
+default_nameserver: "10.0.120.10"  # Primary DC
+
+# ============================================================================
+# Ansible Settings
+# ============================================================================
+
+ansible_python_interpreter: /usr/bin/python3
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
