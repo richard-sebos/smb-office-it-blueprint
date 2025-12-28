@@ -1,0 +1,275 @@
+---
+################################################################################
+# Playbook: update-network-to-corporate-ips.yml
+# Purpose: Update Proxmox network configuration from 192.168.x.x to 10.0.x.x
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-28
+#
+# Description:
+#   Updates the Proxmox host VLAN interfaces to use corporate IP addressing
+#   (10.0.x.x instead of 192.168.x.x). This playbook:
+#   - Backs up current network configuration
+#   - Updates VLAN interface IPs to new corporate scheme
+#   - Creates restore script in case of issues
+#
+# IMPORTANT:
+#   - This does NOT change vmbr0 (lab network - stays 192.168.35.0/24)
+#   - This does NOT change vmbr1 (bridge - no IP)
+#   - This ONLY updates vmbr1.10 and vmbr1.20 IPs
+#   - You MUST reconfigure OPNsense separately after this
+#
+# New IP Assignments:
+#   vmbr1.10: 10.0.10.2/24 (was 192.168.10.1/24)
+#   vmbr1.20: 10.0.20.2/24 (was 192.168.20.1/24)
+#   vmbr1.30: No IP (unchanged)
+#   vmbr1.40: No IP (unchanged)
+#   vmbr1.50: No IP (unchanged)
+#
+# Usage:
+#   # Dry run (check mode)
+#   ansible-playbook playbooks/update-network-to-corporate-ips.yml --check
+#
+#   # Execute
+#   ansible-playbook playbooks/update-network-to-corporate-ips.yml
+#
+# Rollback:
+#   If something goes wrong, use the restore script:
+#   bash backups/network/restore-network-<timestamp>.sh
+################################################################################
+
+- name: Update Proxmox Network to Corporate IP Addressing
+  hosts: pve
+  gather_facts: yes
+  become: yes
+
+  vars:
+    backup_dir: "{{ playbook_dir }}/../backups/network"
+    timestamp: "{{ ansible_date_time.epoch }}"
+
+    # Old IP configuration (192.168.x.x)
+    old_vlan10_ip: "192.168.10.1"
+    old_vlan20_ip: "192.168.20.1"
+
+    # New IP configuration (10.0.x.x)
+    new_vlan10_ip: "10.0.10.2"
+    new_vlan20_ip: "10.0.20.2"
+
+    # Network configuration
+    netmask: "255.255.255.0"
+    prefix: "24"
+
+  tasks:
+    - name: Display migration information
+      debug:
+        msg: |
+          ========================================
+          Network IP Migration
+          ========================================
+
+          This playbook will update Proxmox VLAN IPs:
+
+          VLAN 10 (Management):
+            Old: {{ old_vlan10_ip }}/24
+            New: {{ new_vlan10_ip }}/24
+
+          VLAN 20 (Servers):
+            Old: {{ old_vlan20_ip }}/24
+            New: {{ new_vlan20_ip }}/24
+
+          UNCHANGED:
+            vmbr0: 192.168.35.20/24 (lab network)
+            vmbr1: No IP (VLAN-aware bridge)
+            vmbr1.30, vmbr1.40, vmbr1.50: No IPs
+
+          IMPORTANT:
+            - Backup will be created before changes
+            - OPNsense must be reconfigured separately
+            - Test connectivity after applying changes
+          ========================================
+
+    - name: Create backup directory
+      delegate_to: localhost
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Backup current network configuration
+      slurp:
+        src: /etc/network/interfaces
+      register: network_config_content
+
+    - name: Save network configuration backup locally
+      delegate_to: localhost
+      copy:
+        content: "{{ network_config_content.content | b64decode }}"
+        dest: "{{ backup_dir }}/interfaces.{{ timestamp }}.backup"
+        mode: '0644'
+
+    - name: Display backup location
+      debug:
+        msg: "Network configuration backed up to: {{ backup_dir }}/interfaces.{{ timestamp }}.backup"
+
+    - name: Update VLAN 10 IP address (Management)
+      blockinfile:
+        path: /etc/network/interfaces
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLAN 10"
+        block: |
+          # VLAN 10: Management - Infrastructure management and monitoring
+          auto vmbr1.10
+          iface vmbr1.10 inet static
+                  address {{ new_vlan10_ip }}
+                  netmask {{ netmask }}
+          #       Infrastructure management and monitoring
+
+    - name: Update VLAN 20 IP address (Servers)
+      blockinfile:
+        path: /etc/network/interfaces
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLAN 20"
+        block: |
+          # VLAN 20: Servers - Production application servers
+          auto vmbr1.20
+          iface vmbr1.20 inet static
+                  address {{ new_vlan20_ip }}
+                  netmask {{ netmask }}
+          #       Production application servers
+
+    - name: Verify VLAN 30 has no IP (workstations - VM only)
+      blockinfile:
+        path: /etc/network/interfaces
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLAN 30"
+        block: |
+          # VLAN 30: Workstations - Employee workstations (VM-only network)
+          auto vmbr1.30
+          iface vmbr1.30 inet manual
+          #       Employee workstations
+
+    - name: Verify VLAN 40 has no IP (guest/IoT - VM only)
+      blockinfile:
+        path: /etc/network/interfaces
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLAN 40"
+        block: |
+          # VLAN 40: Guest/IoT - Guest WiFi and IoT devices (VM-only network)
+          auto vmbr1.40
+          iface vmbr1.40 inet manual
+          #       Guest WiFi and IoT devices
+
+    - name: Verify VLAN 50 has no IP (DMZ - VM only)
+      blockinfile:
+        path: /etc/network/interfaces
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - VLAN 50"
+        block: |
+          # VLAN 50: DMZ - Public-facing services (VM-only network)
+          auto vmbr1.50
+          iface vmbr1.50 inet manual
+          #       Public-facing services
+
+    - name: Create restore script
+      delegate_to: localhost
+      copy:
+        dest: "{{ backup_dir }}/restore-network-{{ timestamp }}.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          ################################################################################
+          # Network Configuration Restore Script
+          # Created: {{ ansible_date_time.iso8601 }}
+          # Backup: interfaces.{{ timestamp }}.backup
+          ################################################################################
+
+          set -e
+
+          BACKUP_FILE="{{ backup_dir }}/interfaces.{{ timestamp }}.backup"
+
+          echo "=========================================="
+          echo "Network Configuration Restore"
+          echo "=========================================="
+          echo ""
+          echo "This will restore the network configuration from:"
+          echo "  $BACKUP_FILE"
+          echo ""
+          echo "Current configuration will be backed up to:"
+          echo "  /etc/network/interfaces.before-restore.{{ timestamp }}"
+          echo ""
+          read -p "Continue? (yes/no): " confirm
+
+          if [ "$confirm" != "yes" ]; then
+              echo "Restore cancelled"
+              exit 1
+          fi
+
+          echo ""
+          echo "Backing up current configuration..."
+          ssh root@{{ ansible_host }} "cp /etc/network/interfaces /etc/network/interfaces.before-restore.{{ timestamp }}"
+
+          echo "Copying backup to Proxmox host..."
+          scp "$BACKUP_FILE" root@{{ ansible_host }}:/tmp/interfaces.restore
+
+          echo "Restoring configuration..."
+          ssh root@{{ ansible_host }} "cp /tmp/interfaces.restore /etc/network/interfaces"
+
+          echo "Reloading network configuration..."
+          ssh root@{{ ansible_host }} "ifreload -a"
+
+          echo ""
+          echo "=========================================="
+          echo "Network configuration restored!"
+          echo "=========================================="
+          echo ""
+          echo "Verify network connectivity:"
+          echo "  ping 192.168.35.20"
+          echo "  ping 192.168.10.1"
+          echo "  ping 192.168.20.1"
+          echo ""
+
+    - name: Display next steps
+      debug:
+        msg: |
+          ========================================
+          Network Configuration Updated
+          ========================================
+
+          The network configuration has been updated.
+
+          IMPORTANT - Next Steps:
+
+          1. Review the changes:
+             cat /etc/network/interfaces | grep -A 5 "vmbr1"
+
+          2. Apply the new network configuration:
+             ssh root@{{ ansible_host }}
+             ifreload -a
+
+          3. Verify new IPs are active:
+             ip addr show vmbr1.10
+             ip addr show vmbr1.20
+
+             Expected:
+               vmbr1.10: inet {{ new_vlan10_ip }}/{{ prefix }}
+               vmbr1.20: inet {{ new_vlan20_ip }}/{{ prefix }}
+
+          4. Test connectivity from Proxmox:
+             ping {{ new_vlan10_ip }}
+             ping {{ new_vlan20_ip }}
+
+          5. Reconfigure OPNsense VLANs:
+             Follow guide: docs/guides/reconfigure-opnsense-corporate-ips.md
+
+          6. After OPNsense is configured, test connectivity:
+             ping 10.0.10.1  (OPNsense Management gateway)
+             ping 10.0.20.1  (OPNsense Server gateway)
+
+          ========================================
+          Backup Information
+          ========================================
+
+          Backup saved to:
+            {{ backup_dir }}/interfaces.{{ timestamp }}.backup
+
+          Restore script:
+            {{ backup_dir }}/restore-network-{{ timestamp }}.sh
+
+          To rollback if needed:
+            bash {{ backup_dir }}/restore-network-{{ timestamp }}.sh
+
+          ========================================
