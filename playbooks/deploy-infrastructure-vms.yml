@@ -1,0 +1,369 @@
+---
+################################################################################
+# Playbook: deploy-infrastructure-vms.yml
+# Purpose: Clone and configure infrastructure VMs from templates
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-28
+#
+# Description:
+#   Deploys core infrastructure VMs by cloning from templates and configuring
+#   them with static IPs, proper resources, and network settings.
+#
+# VMs Deployed:
+#   - VM 110: Ansible Control Server (Ubuntu 22.04, VLAN 110)
+#   - VM 200: Domain Controller 1 (Debian 12, VLAN 120)
+#   - VM 201: Domain Controller 2 (Debian 12, VLAN 120)
+#
+# Usage:
+#   # Deploy all infrastructure VMs
+#   ansible-playbook playbooks/deploy-infrastructure-vms.yml
+#
+#   # Deploy specific VMs only
+#   ansible-playbook playbooks/deploy-infrastructure-vms.yml --tags ansible
+#   ansible-playbook playbooks/deploy-infrastructure-vms.yml --tags domain-controllers
+#
+#   # Dry run
+#   ansible-playbook playbooks/deploy-infrastructure-vms.yml --check
+################################################################################
+
+- name: Deploy Infrastructure VMs
+  hosts: pve
+  gather_facts: yes
+  become: yes
+
+  vars:
+    storage: "vmDrive"
+
+    # VM definitions
+    vms:
+      - name: "ansible-ctrl"
+        vmid: 110
+        template: 9000  # Ubuntu 22.04
+        cores: 2
+        memory: 4096    # 4GB
+        disk_size: "+90G"  # Expand to 100GB total
+        vlan: 110
+        ip: "10.0.110.10"
+        gateway: "10.0.110.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;automation;management"
+        ansible_tags: "ansible"
+        description: |
+          Ansible Control Server
+
+          Purpose: Centralized configuration management and automation
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 110 (Management)
+
+          Created: {{ ansible_date_time.date }}
+
+      - name: "dc01"
+        vmid: 200
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096    # 4GB
+        disk_size: "+90G"  # Expand to 100GB total
+        vlan: 120
+        ip: "10.0.120.10"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;domain-controller;dns;dhcp"
+        ansible_tags: "domain-controllers"
+        description: |
+          Domain Controller 1 (Primary)
+
+          Purpose: Active Directory, DNS, DHCP
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Created: {{ ansible_date_time.date }}
+
+      - name: "dc02"
+        vmid: 201
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096    # 4GB
+        disk_size: "+90G"  # Expand to 100GB total
+        vlan: 120
+        ip: "10.0.120.11"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;domain-controller;dns;dhcp;replica"
+        ansible_tags: "domain-controllers"
+        description: |
+          Domain Controller 2 (Backup)
+
+          Purpose: Active Directory replica, DNS, DHCP
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Created: {{ ansible_date_time.date }}
+
+  tasks:
+    - name: Display deployment plan
+      debug:
+        msg: |
+          ========================================
+          Infrastructure VM Deployment
+          ========================================
+
+          VMs to be deployed:
+          {% for vm in vms %}
+
+          {{ loop.index }}. {{ vm.name }} (VM {{ vm.vmid }})
+             Template: {{ vm.template }}
+             CPUs: {{ vm.cores }}
+             RAM: {{ vm.memory }}MB
+             Disk: 10GB {{ vm.disk_size }}
+             Network: VLAN {{ vm.vlan }}
+             IP: {{ vm.ip }}/{{ vm.netmask }}
+             Gateway: {{ vm.gateway }}
+          {% endfor %}
+
+          ========================================
+
+    - name: Check if template VMs exist
+      shell: "qm status {{ item }} 2>&1"
+      loop:
+        - 9000  # Ubuntu template
+        - 9100  # Debian template
+      register: template_check
+      failed_when: false
+      changed_when: false
+
+    - name: Verify templates exist
+      assert:
+        that:
+          - "'running' in item.stdout or 'stopped' in item.stdout or 'status: running' in item.stdout or 'status: stopped' in item.stdout"
+        fail_msg: "Template VM {{ item.item }} not found! Run template creation scripts first."
+        success_msg: "Template VM {{ item.item }} exists"
+      loop: "{{ template_check.results }}"
+      loop_control:
+        label: "Template {{ item.item }}"
+
+    - name: Check if VMs already exist
+      shell: "qm status {{ item.vmid }} 2>&1"
+      loop: "{{ vms }}"
+      register: vm_existence_check
+      failed_when: false
+      changed_when: false
+
+    - name: Display existing VMs warning
+      debug:
+        msg: |
+          WARNING: VM {{ item.item.vmid }} ({{ item.item.name }}) already exists!
+
+          To destroy and recreate:
+            qm stop {{ item.item.vmid }}
+            qm destroy {{ item.item.vmid }}
+
+          Then re-run this playbook.
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+
+    - name: Fail if any VM already exists
+      fail:
+        msg: "VM {{ item.item.vmid }} already exists. Destroy it first or use --skip-tags validation"
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+      tags:
+        - validation
+
+    - name: Clone VMs from templates
+      shell: |
+        qm clone {{ item.template }} {{ item.vmid }} \
+          --name {{ item.name }} \
+          --full \
+          --storage {{ storage }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Cloning {{ item.name }} from template {{ item.template }}"
+      tags: "{{ item.ansible_tags }}"
+      register: clone_result
+
+    - name: Configure VM resources (CPU and Memory)
+      shell: |
+        qm set {{ item.vmid }} \
+          --cores {{ item.cores }} \
+          --memory {{ item.memory }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring resources for {{ item.name }}"
+
+    - name: Resize VM disks
+      shell: |
+        qm resize {{ item.vmid }} scsi0 {{ item.disk_size }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Resizing disk for {{ item.name }}"
+
+    - name: Configure VM network (VLAN and bridge)
+      shell: |
+        qm set {{ item.vmid }} \
+          --net0 virtio,bridge=vmbr1,tag={{ item.vlan }},firewall=0
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring network for {{ item.name }} on VLAN {{ item.vlan }}"
+
+    - name: Configure cloud-init (IP, gateway, nameserver)
+      shell: |
+        qm set {{ item.vmid }} \
+          --ipconfig0 ip={{ item.ip }}/{{ item.netmask }},gw={{ item.gateway }} \
+          --nameserver {{ item.gateway }} \
+          --searchdomain corp.company.local
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring cloud-init for {{ item.name }}"
+
+    - name: Set VM description
+      shell: |
+        qm set {{ item.vmid }} --description "{{ item.description }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Setting description for {{ item.name }}"
+
+    - name: Apply Proxmox tags
+      shell: |
+        qm set {{ item.vmid }} --tags "{{ item.proxmox_tags }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Applying tags to {{ item.name }}: {{ item.proxmox_tags }}"
+
+    - name: Configure VM to start on boot
+      shell: |
+        qm set {{ item.vmid }} --onboot 1
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Enabling auto-start for {{ item.name }}"
+
+    - name: Add VMs to appropriate resource pools
+      shell: |
+        {% if item.vlan == 110 %}
+        pvesh set /pools/infrastructure --vms {{ item.vmid }}
+        {% elif item.vlan == 120 %}
+        pvesh set /pools/production --vms {{ item.vmid }}
+        {% endif %}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Adding {{ item.name }} to resource pool"
+      failed_when: false  # Pool might not exist yet
+
+    - name: Display VM deployment summary
+      debug:
+        msg: |
+          ========================================
+          VM Deployment Complete
+          ========================================
+
+          Deployed VMs:
+          {% for vm in vms %}
+
+          ✓ {{ vm.name }} (VM {{ vm.vmid }})
+            IP: {{ vm.ip }}/{{ vm.netmask }}
+            Gateway: {{ vm.gateway }}
+            VLAN: {{ vm.vlan }}
+            Status: Created (not started)
+          {% endfor %}
+
+          ========================================
+          Next Steps
+          ========================================
+
+          1. Start the VMs:
+             {% for vm in vms %}
+             qm start {{ vm.vmid }}  # {{ vm.name }}
+             {% endfor %}
+
+          2. Verify VMs are running:
+             {% for vm in vms %}
+             qm status {{ vm.vmid }}
+             {% endfor %}
+
+          3. Check cloud-init applied correctly:
+             # Wait 30-60 seconds after starting, then:
+             {% for vm in vms %}
+             ssh ubuntu@{{ vm.ip }}  # {{ vm.name }} (if Ubuntu)
+             ssh debian@{{ vm.ip }}  # {{ vm.name }} (if Debian)
+             {% endfor %}
+
+          4. Verify connectivity:
+             {% for vm in vms %}
+             ping {{ vm.ip }}  # {{ vm.name }}
+             {% endfor %}
+
+          5. Test internet access from VMs:
+             # SSH into each VM and run:
+             ping -c 3 8.8.8.8
+             curl -I https://google.com
+
+          ========================================
+
+    - name: Create VM startup script
+      delegate_to: localhost
+      copy:
+        dest: "{{ playbook_dir }}/../scripts/start-infrastructure-vms.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          ################################################################################
+          # Script: start-infrastructure-vms.sh
+          # Purpose: Start all infrastructure VMs in correct order
+          # Created: {{ ansible_date_time.date }}
+          ################################################################################
+
+          echo "Starting infrastructure VMs..."
+          echo ""
+
+          {% for vm in vms %}
+          echo "Starting {{ vm.name }} (VM {{ vm.vmid }})..."
+          qm start {{ vm.vmid }}
+          sleep 5
+          {% endfor %}
+
+          echo ""
+          echo "Waiting for VMs to boot (30 seconds)..."
+          sleep 30
+
+          echo ""
+          echo "VM Status:"
+          {% for vm in vms %}
+          qm status {{ vm.vmid }}
+          {% endfor %}
+
+          echo ""
+          echo "Testing connectivity:"
+          {% for vm in vms %}
+          ping -c 2 {{ vm.ip }} && echo "✓ {{ vm.name }} is reachable" || echo "✗ {{ vm.name }} is not reachable"
+          {% endfor %}
+
+          echo ""
+          echo "Infrastructure VMs started!"
+
+    - name: Create VM stop script
+      delegate_to: localhost
+      copy:
+        dest: "{{ playbook_dir }}/../scripts/stop-infrastructure-vms.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          ################################################################################
+          # Script: stop-infrastructure-vms.sh
+          # Purpose: Stop all infrastructure VMs in reverse order
+          # Created: {{ ansible_date_time.date }}
+          ################################################################################
+
+          echo "Stopping infrastructure VMs..."
+          echo ""
+
+          {% for vm in vms | reverse %}
+          echo "Stopping {{ vm.name }} (VM {{ vm.vmid }})..."
+          qm stop {{ vm.vmid }}
+          sleep 3
+          {% endfor %}
+
+          echo ""
+          echo "Infrastructure VMs stopped!"
