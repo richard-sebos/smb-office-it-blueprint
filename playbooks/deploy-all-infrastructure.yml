@@ -561,13 +561,12 @@
         - always
         - configure
 
-    - name: Configure VM to start on boot (infrastructure and production only)
+    - name: Disable VM auto-start on boot
       shell: |
-        qm set {{ item.vmid }} --onboot 1
+        qm set {{ item.vmid }} --onboot 0
       loop: "{{ vms }}"
-      when: item.category in ['management', 'servers', 'dmz']
       loop_control:
-        label: "Enabling auto-start for {{ item.name }}"
+        label: "Disabling auto-start for {{ item.name }}"
       tags:
         - always
         - configure
@@ -845,7 +844,7 @@
           | VMID | Hostname | IP Address | Purpose | OS |
           |------|----------|------------|---------|-----|
           {% for vm in vms | selectattr('category', 'equalto', 'management') | sort(attribute='vmid') %}
-          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[0] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
           {% endfor %}
 
           ## Production Servers (VLAN 120)
@@ -853,7 +852,7 @@
           | VMID | Hostname | IP Address | Purpose | OS |
           |------|----------|------------|---------|-----|
           {% for vm in vms | selectattr('category', 'equalto', 'servers') | sort(attribute='vmid') %}
-          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[0] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
           {% endfor %}
 
           ## Workstations (VLAN 130)
@@ -861,7 +860,7 @@
           | VMID | Hostname | IP Address | Purpose | OS |
           |------|----------|------------|---------|-----|
           {% for vm in vms | selectattr('category', 'equalto', 'workstations') | sort(attribute='vmid') %}
-          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[0] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
           {% endfor %}
 
           ## DMZ Services (VLAN 150)
@@ -869,7 +868,7 @@
           | VMID | Hostname | IP Address | Purpose | OS |
           |------|----------|------------|---------|-----|
           {% for vm in vms | selectattr('category', 'equalto', 'dmz') | sort(attribute='vmid') %}
-          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[0] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
           {% endfor %}
 
           ## Quick Reference
