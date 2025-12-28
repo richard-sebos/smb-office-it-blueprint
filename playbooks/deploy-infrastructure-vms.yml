@@ -182,8 +182,10 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Cloning {{ item.name }} from template {{ item.template }}"
-      tags: "{{ item.ansible_tags }}"
       register: clone_result
+      tags:
+        - always
+        - clone
 
     - name: Configure VM resources (CPU and Memory)
       shell: |
@@ -193,6 +195,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Configuring resources for {{ item.name }}"
+      tags:
+        - always
+        - configure
 
     - name: Resize VM disks
       shell: |
@@ -200,6 +205,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Resizing disk for {{ item.name }}"
+      tags:
+        - always
+        - configure
 
     - name: Configure VM network (VLAN and bridge)
       shell: |
@@ -208,6 +216,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Configuring network for {{ item.name }} on VLAN {{ item.vlan }}"
+      tags:
+        - always
+        - configure
 
     - name: Configure cloud-init (IP, gateway, nameserver)
       shell: |
@@ -218,6 +229,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Configuring cloud-init for {{ item.name }}"
+      tags:
+        - always
+        - configure
 
     - name: Set VM description
       shell: |
@@ -225,6 +239,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Setting description for {{ item.name }}"
+      tags:
+        - always
+        - configure
 
     - name: Apply Proxmox tags
       shell: |
@@ -232,6 +249,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Applying tags to {{ item.name }}: {{ item.proxmox_tags }}"
+      tags:
+        - always
+        - configure
 
     - name: Configure VM to start on boot
       shell: |
@@ -239,6 +259,9 @@
       loop: "{{ vms }}"
       loop_control:
         label: "Enabling auto-start for {{ item.name }}"
+      tags:
+        - always
+        - configure
 
     - name: Add VMs to appropriate resource pools
       shell: |
@@ -251,6 +274,9 @@
       loop_control:
         label: "Adding {{ item.name }} to resource pool"
       failed_when: false  # Pool might not exist yet
+      tags:
+        - always
+        - configure
 
     - name: Display VM deployment summary
       debug:
