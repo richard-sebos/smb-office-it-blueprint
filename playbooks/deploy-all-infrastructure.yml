@@ -46,7 +46,7 @@
 
       - name: "ansible-ctrl"
         vmid: 110
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -54,14 +54,14 @@
         ip: "10.0.110.10"
         gateway: "10.0.110.1"
         netmask: "24"
-        proxmox_tags: "infrastructure;automation;management;ubuntu;vlan-110"
+        proxmox_tags: "infrastructure;automation;management;rocky;vlan-110"
         pool: "infrastructure"
         category: "management"
         description: |
           Ansible Control Server
 
           Purpose: Centralized configuration management and automation
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 110 (Management)
 
           Services: Ansible, Git, Python automation tools
@@ -69,7 +69,7 @@
 
       - name: "monitoring"
         vmid: 111
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -77,14 +77,14 @@
         ip: "10.0.110.11"
         gateway: "10.0.110.1"
         netmask: "24"
-        proxmox_tags: "infrastructure;monitoring;management;ubuntu;vlan-110;auto-backup"
+        proxmox_tags: "infrastructure;monitoring;management;rocky;vlan-110;auto-backup"
         pool: "infrastructure"
         category: "management"
         description: |
           Monitoring and Alerting Server
 
           Purpose: System monitoring, metrics, and alerting
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 110 (Management)
 
           Services: Prometheus, Grafana, or Zabbix
@@ -107,7 +107,7 @@
           Backup Server
 
           Purpose: Centralized backup storage and management
-          OS: Debian 12
+          OS: Debian 12 (Template 9075)
           Network: VLAN 110 (Management)
 
           Services: Bacula, Rsync, or similar backup solution
@@ -115,7 +115,7 @@
 
       - name: "jump-host"
         vmid: 113
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"
@@ -123,14 +123,14 @@
         ip: "10.0.110.13"
         gateway: "10.0.110.1"
         netmask: "24"
-        proxmox_tags: "infrastructure;bastion;security;ubuntu;vlan-110;monitored"
+        proxmox_tags: "infrastructure;bastion;security;rocky;vlan-110;monitored"
         pool: "infrastructure"
         category: "management"
         description: |
           Jump Host / Bastion Server
 
           Purpose: Secure SSH gateway for administrative access
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 110 (Management)
 
           Services: SSH, 2FA, session recording
@@ -188,7 +188,7 @@
 
       - name: "fs01"
         vmid: 210
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 4
         memory: 8192
         disk_size: "+490G"  # Large storage for file server
@@ -196,14 +196,14 @@
         ip: "10.0.120.20"
         gateway: "10.0.120.1"
         netmask: "24"
-        proxmox_tags: "production;file-server;storage;samba;ubuntu;vlan-120;auto-backup;monitored"
+        proxmox_tags: "production;file-server;storage;samba;rocky;vlan-120;auto-backup;monitored"
         pool: "production"
         category: "servers"
         description: |
           File Server 1
 
           Purpose: Centralized file storage and sharing
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 120 (Servers)
 
           Services: Samba file shares, NFS
@@ -234,7 +234,7 @@
 
       - name: "app01"
         vmid: 230
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 4
         memory: 8192
         disk_size: "+90G"
@@ -242,14 +242,14 @@
         ip: "10.0.120.40"
         gateway: "10.0.120.1"
         netmask: "24"
-        proxmox_tags: "production;app-server;web-server;nginx;ubuntu;vlan-120;monitored"
+        proxmox_tags: "production;app-server;web-server;nginx;rocky;vlan-120;monitored"
         pool: "production"
         category: "servers"
         description: |
           Application Server 1
 
           Purpose: Business application hosting
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 120 (Servers)
 
           Services: Nginx, Node.js, Python, or custom apps
@@ -284,7 +284,7 @@
 
       - name: "ws-admin01"
         vmid: 300
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.ubuntu_desktop }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -299,7 +299,7 @@
           Admin Workstation 1
 
           Purpose: IT administrator workstation
-          OS: Ubuntu 22.04 Desktop (or Windows)
+          OS: Ubuntu 22.04 Desktop (Template 9250)
           Network: VLAN 130 (Workstations)
 
           Services: Desktop environment, admin tools
@@ -311,7 +311,7 @@
 
       - name: "web01"
         vmid: 450
-        template: "{{ vm_templates.ubuntu }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 4096
         disk_size: "+90G"
@@ -319,14 +319,14 @@
         ip: "10.0.150.10"
         gateway: "10.0.150.1"
         netmask: "24"
-        proxmox_tags: "production;web-server;nginx;public-facing;ubuntu;vlan-150;monitored;auto-update"
+        proxmox_tags: "production;web-server;nginx;public-facing;rocky;vlan-150;monitored;auto-update"
         pool: "dmz"
         category: "dmz"
         description: |
           Web Server 1 (DMZ)
 
           Purpose: Public-facing web server
-          OS: Ubuntu 22.04 LTS
+          OS: Rocky Linux 9
           Network: VLAN 150 (DMZ)
 
           Services: Nginx, Let's Encrypt SSL
@@ -334,7 +334,7 @@
 
       - name: "vpn-gw"
         vmid: 410
-        template: "{{ vm_templates.debian }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"
@@ -342,14 +342,14 @@
         ip: "10.0.150.20"
         gateway: "10.0.150.1"
         netmask: "24"
-        proxmox_tags: "infrastructure;vpn;security;debian;vlan-150;monitored"
+        proxmox_tags: "infrastructure;vpn;security;rocky;vlan-150;monitored"
         pool: "dmz"
         category: "dmz"
         description: |
           VPN Gateway
 
           Purpose: Remote access VPN concentrator
-          OS: Debian 12
+          OS: Rocky Linux 9
           Network: VLAN 150 (DMZ)
 
           Services: OpenVPN or WireGuard
@@ -357,7 +357,7 @@
 
       - name: "mail-relay"
         vmid: 420
-        template: "{{ vm_templates.debian }}"
+        template: "{{ vm_templates.rocky }}"
         cores: 2
         memory: 2048
         disk_size: "+40G"
@@ -365,14 +365,14 @@
         ip: "10.0.150.30"
         gateway: "10.0.150.1"
         netmask: "24"
-        proxmox_tags: "production;mail-relay;smtp;public-facing;debian;vlan-150;monitored"
+        proxmox_tags: "production;mail-relay;smtp;public-facing;rocky;vlan-150;monitored"
         pool: "dmz"
         category: "dmz"
         description: |
           Mail Relay (DMZ)
 
           Purpose: Email relay/gateway for internet mail
-          OS: Debian 12
+          OS: Rocky Linux 9
           Network: VLAN 150 (DMZ)
 
           Services: Postfix SMTP relay, spam filtering

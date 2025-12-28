@@ -13,8 +13,9 @@
 
 vm_templates:
   ubuntu: 9000    # Ubuntu 22.04 LTS template
-  debian: 9100    # Debian 12 template
-  rocky: 9200     # Rocky Linux 9 template
+  ubuntu_desktop: 9250    # Ubuntu 22.04 Desktop template (built from ISO)
+  debian: 9075    # Debian 12 template (built from ISO)
+  rocky: 9275     # Rocky Linux 9 template (built from ISO)
 
 # ============================================================================
 # Infrastructure Settings
