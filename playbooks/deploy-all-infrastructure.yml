@@ -1,0 +1,840 @@
+---
+################################################################################
+# Playbook: deploy-all-infrastructure.yml
+# Purpose: Deploy complete SMB Office IT infrastructure
+# Author: SMB Office IT Blueprint Project
+# Created: 2025-12-28
+#
+# Description:
+#   Deploys all infrastructure VMs needed for a complete SMB office environment.
+#   This includes management, domain services, file/database servers,
+#   monitoring, and DMZ services.
+#
+# VM Categories:
+#   - Management Infrastructure (VLAN 110)
+#   - Production Servers (VLAN 120)
+#   - Workstations (VLAN 130)
+#   - DMZ Services (VLAN 150)
+#
+# Usage:
+#   # Deploy all VMs
+#   ansible-playbook playbooks/deploy-all-infrastructure.yml
+#
+#   # Deploy specific categories
+#   ansible-playbook playbooks/deploy-all-infrastructure.yml --tags management
+#   ansible-playbook playbooks/deploy-all-infrastructure.yml --tags servers
+#   ansible-playbook playbooks/deploy-all-infrastructure.yml --tags dmz
+#
+#   # Dry run
+#   ansible-playbook playbooks/deploy-all-infrastructure.yml --check
+################################################################################
+
+- name: Deploy Complete SMB Infrastructure
+  hosts: pve
+  gather_facts: yes
+  become: yes
+
+  vars:
+    storage: "vmDrive"
+    domain: "corp.company.local"
+
+    # VM definitions - organized by category
+    vms:
+      # ========================================================================
+      # VLAN 110 - Management Infrastructure
+      # ========================================================================
+
+      - name: "ansible-ctrl"
+        vmid: 110
+        template: 9000  # Ubuntu 22.04
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 110
+        ip: "10.0.110.10"
+        gateway: "10.0.110.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;automation;management;ubuntu;vlan-110"
+        pool: "infrastructure"
+        category: "management"
+        description: |
+          Ansible Control Server
+
+          Purpose: Centralized configuration management and automation
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 110 (Management)
+
+          Services: Ansible, Git, Python automation tools
+          Created: {{ ansible_date_time.date }}
+
+      - name: "monitoring"
+        vmid: 111
+        template: 9000  # Ubuntu 22.04
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 110
+        ip: "10.0.110.11"
+        gateway: "10.0.110.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;monitoring;management;ubuntu;vlan-110;auto-backup"
+        pool: "infrastructure"
+        category: "management"
+        description: |
+          Monitoring and Alerting Server
+
+          Purpose: System monitoring, metrics, and alerting
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 110 (Management)
+
+          Services: Prometheus, Grafana, or Zabbix
+          Created: {{ ansible_date_time.date }}
+
+      - name: "backup"
+        vmid: 112
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096
+        disk_size: "+190G"  # Larger for backup storage
+        vlan: 110
+        ip: "10.0.110.12"
+        gateway: "10.0.110.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;backup;storage;debian;vlan-110;auto-backup"
+        pool: "infrastructure"
+        category: "management"
+        description: |
+          Backup Server
+
+          Purpose: Centralized backup storage and management
+          OS: Debian 12
+          Network: VLAN 110 (Management)
+
+          Services: Bacula, Rsync, or similar backup solution
+          Created: {{ ansible_date_time.date }}
+
+      - name: "jump-host"
+        vmid: 113
+        template: 9000  # Ubuntu 22.04
+        cores: 2
+        memory: 2048
+        disk_size: "+40G"
+        vlan: 110
+        ip: "10.0.110.13"
+        gateway: "10.0.110.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;bastion;security;ubuntu;vlan-110;monitored"
+        pool: "infrastructure"
+        category: "management"
+        description: |
+          Jump Host / Bastion Server
+
+          Purpose: Secure SSH gateway for administrative access
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 110 (Management)
+
+          Services: SSH, 2FA, session recording
+          Created: {{ ansible_date_time.date }}
+
+      # ========================================================================
+      # VLAN 120 - Production Servers
+      # ========================================================================
+
+      - name: "dc01"
+        vmid: 200
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 120
+        ip: "10.0.120.10"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;domain-controller;dns;dhcp;active-directory;primary;debian;vlan-120;auto-backup;monitored"
+        pool: "production"
+        category: "servers"
+        description: |
+          Domain Controller 1 (Primary)
+
+          Purpose: Active Directory, DNS, DHCP (Primary)
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Services: Samba AD DC, BIND DNS, ISC DHCP
+          Created: {{ ansible_date_time.date }}
+
+      - name: "dc02"
+        vmid: 201
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 120
+        ip: "10.0.120.11"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;domain-controller;dns;dhcp;active-directory;replica;debian;vlan-120;auto-backup;monitored"
+        pool: "production"
+        category: "servers"
+        description: |
+          Domain Controller 2 (Backup)
+
+          Purpose: Active Directory replica, DNS, DHCP (Backup)
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Services: Samba AD DC replica, BIND DNS, ISC DHCP
+          Created: {{ ansible_date_time.date }}
+
+      - name: "fs01"
+        vmid: 210
+        template: 9000  # Ubuntu 22.04
+        cores: 4
+        memory: 8192
+        disk_size: "+490G"  # Large storage for file server
+        vlan: 120
+        ip: "10.0.120.20"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;file-server;storage;samba;ubuntu;vlan-120;auto-backup;monitored"
+        pool: "production"
+        category: "servers"
+        description: |
+          File Server 1
+
+          Purpose: Centralized file storage and sharing
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 120 (Servers)
+
+          Services: Samba file shares, NFS
+          Created: {{ ansible_date_time.date }}
+
+      - name: "db01"
+        vmid: 220
+        template: 9100  # Debian 12
+        cores: 4
+        memory: 8192
+        disk_size: "+190G"
+        vlan: 120
+        ip: "10.0.120.30"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;database;postgresql;primary;debian;vlan-120;auto-backup;monitored;sensitive-data"
+        pool: "production"
+        category: "servers"
+        description: |
+          Database Server 1 (Primary)
+
+          Purpose: PostgreSQL database server (Primary)
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Services: PostgreSQL 15+
+          Created: {{ ansible_date_time.date }}
+
+      - name: "app01"
+        vmid: 230
+        template: 9000  # Ubuntu 22.04
+        cores: 4
+        memory: 8192
+        disk_size: "+90G"
+        vlan: 120
+        ip: "10.0.120.40"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;app-server;web-server;nginx;ubuntu;vlan-120;monitored"
+        pool: "production"
+        category: "servers"
+        description: |
+          Application Server 1
+
+          Purpose: Business application hosting
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 120 (Servers)
+
+          Services: Nginx, Node.js, Python, or custom apps
+          Created: {{ ansible_date_time.date }}
+
+      - name: "mail01"
+        vmid: 240
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 4096
+        disk_size: "+190G"
+        vlan: 120
+        ip: "10.0.120.50"
+        gateway: "10.0.120.1"
+        netmask: "24"
+        proxmox_tags: "production;mail-server;smtp;imap;debian;vlan-120;auto-backup;monitored"
+        pool: "production"
+        category: "servers"
+        description: |
+          Email Server
+
+          Purpose: Internal email server (SMTP/IMAP)
+          OS: Debian 12
+          Network: VLAN 120 (Servers)
+
+          Services: Postfix, Dovecot, or Zimbra
+          Created: {{ ansible_date_time.date }}
+
+      # ========================================================================
+      # VLAN 130 - Workstations (Sample)
+      # ========================================================================
+
+      - name: "ws-admin01"
+        vmid: 300
+        template: 9000  # Ubuntu 22.04 (could be Windows template if available)
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 130
+        ip: "10.0.130.10"
+        gateway: "10.0.130.1"
+        netmask: "24"
+        proxmox_tags: "workstation;admin;privileged-access;ubuntu;vlan-130;monitored"
+        pool: "production"
+        category: "workstations"
+        description: |
+          Admin Workstation 1
+
+          Purpose: IT administrator workstation
+          OS: Ubuntu 22.04 Desktop (or Windows)
+          Network: VLAN 130 (Workstations)
+
+          Services: Desktop environment, admin tools
+          Created: {{ ansible_date_time.date }}
+
+      # ========================================================================
+      # VLAN 150 - DMZ Services
+      # ========================================================================
+
+      - name: "web01"
+        vmid: 400
+        template: 9000  # Ubuntu 22.04
+        cores: 2
+        memory: 4096
+        disk_size: "+90G"
+        vlan: 150
+        ip: "10.0.150.10"
+        gateway: "10.0.150.1"
+        netmask: "24"
+        proxmox_tags: "production;web-server;nginx;public-facing;ubuntu;vlan-150;monitored;auto-update"
+        pool: "dmz"
+        category: "dmz"
+        description: |
+          Web Server 1 (DMZ)
+
+          Purpose: Public-facing web server
+          OS: Ubuntu 22.04 LTS
+          Network: VLAN 150 (DMZ)
+
+          Services: Nginx, Let's Encrypt SSL
+          Created: {{ ansible_date_time.date }}
+
+      - name: "vpn-gw"
+        vmid: 410
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 2048
+        disk_size: "+40G"
+        vlan: 150
+        ip: "10.0.150.20"
+        gateway: "10.0.150.1"
+        netmask: "24"
+        proxmox_tags: "infrastructure;vpn;security;debian;vlan-150;monitored"
+        pool: "dmz"
+        category: "dmz"
+        description: |
+          VPN Gateway
+
+          Purpose: Remote access VPN concentrator
+          OS: Debian 12
+          Network: VLAN 150 (DMZ)
+
+          Services: OpenVPN or WireGuard
+          Created: {{ ansible_date_time.date }}
+
+      - name: "mail-relay"
+        vmid: 420
+        template: 9100  # Debian 12
+        cores: 2
+        memory: 2048
+        disk_size: "+40G"
+        vlan: 150
+        ip: "10.0.150.30"
+        gateway: "10.0.150.1"
+        netmask: "24"
+        proxmox_tags: "production;mail-relay;smtp;public-facing;debian;vlan-150;monitored"
+        pool: "dmz"
+        category: "dmz"
+        description: |
+          Mail Relay (DMZ)
+
+          Purpose: Email relay/gateway for internet mail
+          OS: Debian 12
+          Network: VLAN 150 (DMZ)
+
+          Services: Postfix SMTP relay, spam filtering
+          Created: {{ ansible_date_time.date }}
+
+  tasks:
+    # ========================================================================
+    # Pre-Deployment Checks
+    # ========================================================================
+
+    - name: Display deployment plan
+      debug:
+        msg: |
+          ========================================
+          COMPLETE INFRASTRUCTURE DEPLOYMENT
+          ========================================
+
+          Total VMs to deploy: {{ vms | length }}
+
+          By Category:
+          {% set mgmt_vms = vms | selectattr('category', 'equalto', 'management') | list %}
+          {% set server_vms = vms | selectattr('category', 'equalto', 'servers') | list %}
+          {% set ws_vms = vms | selectattr('category', 'equalto', 'workstations') | list %}
+          {% set dmz_vms = vms | selectattr('category', 'equalto', 'dmz') | list %}
+
+          Management (VLAN 110): {{ mgmt_vms | length }} VMs
+          {% for vm in mgmt_vms %}
+            - {{ vm.name }} ({{ vm.vmid }}): {{ vm.ip }}
+          {% endfor %}
+
+          Production Servers (VLAN 120): {{ server_vms | length }} VMs
+          {% for vm in server_vms %}
+            - {{ vm.name }} ({{ vm.vmid }}): {{ vm.ip }}
+          {% endfor %}
+
+          Workstations (VLAN 130): {{ ws_vms | length }} VMs
+          {% for vm in ws_vms %}
+            - {{ vm.name }} ({{ vm.vmid }}): {{ vm.ip }}
+          {% endfor %}
+
+          DMZ (VLAN 150): {{ dmz_vms | length }} VMs
+          {% for vm in dmz_vms %}
+            - {{ vm.name }} ({{ vm.vmid }}): {{ vm.ip }}
+          {% endfor %}
+
+          ========================================
+      tags: always
+
+    - name: Check if template VMs exist
+      shell: "qm status {{ item }} 2>&1"
+      loop:
+        - 9000  # Ubuntu template
+        - 9100  # Debian template
+        - 9200  # Rocky template
+      register: template_check
+      failed_when: false
+      changed_when: false
+      tags: always
+
+    - name: Verify templates exist
+      assert:
+        that:
+          - "'running' in item.stdout or 'stopped' in item.stdout or 'status: running' in item.stdout or 'status: stopped' in item.stdout"
+        fail_msg: "Template VM {{ item.item }} not found! Run template creation scripts first."
+        success_msg: "Template VM {{ item.item }} exists"
+      loop: "{{ template_check.results }}"
+      loop_control:
+        label: "Template {{ item.item }}"
+      tags: always
+
+    - name: Check if VMs already exist
+      shell: "qm status {{ item.vmid }} 2>&1"
+      loop: "{{ vms }}"
+      register: vm_existence_check
+      failed_when: false
+      changed_when: false
+      tags: always
+
+    - name: Display existing VMs warning
+      debug:
+        msg: |
+          WARNING: VM {{ item.item.vmid }} ({{ item.item.name }}) already exists!
+
+          To destroy and recreate:
+            qm stop {{ item.item.vmid }}
+            qm destroy {{ item.item.vmid }}
+
+          Then re-run this playbook.
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+      tags: always
+
+    - name: Fail if any VM already exists
+      fail:
+        msg: "VM {{ item.item.vmid }} already exists. Destroy it first or use --skip-tags validation"
+      when: "'running' in item.stdout or 'stopped' in item.stdout"
+      loop: "{{ vm_existence_check.results }}"
+      loop_control:
+        label: "VM {{ item.item.vmid }}"
+      tags:
+        - validation
+
+    # ========================================================================
+    # VM Deployment
+    # ========================================================================
+
+    - name: Clone VMs from templates
+      shell: |
+        qm clone {{ item.template }} {{ item.vmid }} \
+          --name {{ item.name }} \
+          --full \
+          --storage {{ storage }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Cloning {{ item.name }} from template {{ item.template }}"
+      register: clone_result
+      tags:
+        - always
+        - clone
+
+    - name: Configure VM resources (CPU and Memory)
+      shell: |
+        qm set {{ item.vmid }} \
+          --cores {{ item.cores }} \
+          --memory {{ item.memory }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring resources for {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Resize VM disks
+      shell: |
+        qm resize {{ item.vmid }} scsi0 {{ item.disk_size }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Resizing disk for {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Configure VM network (VLAN and bridge)
+      shell: |
+        qm set {{ item.vmid }} \
+          --net0 virtio,bridge=vmbr1,tag={{ item.vlan }},firewall=0
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring network for {{ item.name }} on VLAN {{ item.vlan }}"
+      tags:
+        - always
+        - configure
+
+    - name: Configure cloud-init (IP, gateway, nameserver)
+      shell: |
+        qm set {{ item.vmid }} \
+          --ipconfig0 ip={{ item.ip }}/{{ item.netmask }},gw={{ item.gateway }} \
+          --nameserver {{ item.gateway }} \
+          --searchdomain {{ domain }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Configuring cloud-init for {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Set VM description
+      shell: |
+        qm set {{ item.vmid }} --description "{{ item.description }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Setting description for {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Apply Proxmox tags
+      shell: |
+        qm set {{ item.vmid }} --tags "{{ item.proxmox_tags }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Applying tags to {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Configure VM to start on boot (infrastructure and production only)
+      shell: |
+        qm set {{ item.vmid }} --onboot 1
+      loop: "{{ vms }}"
+      when: item.category in ['management', 'servers', 'dmz']
+      loop_control:
+        label: "Enabling auto-start for {{ item.name }}"
+      tags:
+        - always
+        - configure
+
+    - name: Add VMs to resource pools
+      shell: |
+        pvesh set /pools/{{ item.pool }} --vms {{ item.vmid }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "Adding {{ item.name }} to pool {{ item.pool }}"
+      failed_when: false  # Pool might not exist yet
+      tags:
+        - always
+        - configure
+
+    # ========================================================================
+    # Post-Deployment Summary
+    # ========================================================================
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ========================================
+          DEPLOYMENT COMPLETE
+          ========================================
+
+          All {{ vms | length }} VMs have been created successfully!
+
+          VMs by Category:
+
+          MANAGEMENT (VLAN 110):
+          {% for vm in vms | selectattr('category', 'equalto', 'management') %}
+          ✓ {{ vm.name }} (VM {{ vm.vmid }}) - {{ vm.ip }}
+          {% endfor %}
+
+          PRODUCTION SERVERS (VLAN 120):
+          {% for vm in vms | selectattr('category', 'equalto', 'servers') %}
+          ✓ {{ vm.name }} (VM {{ vm.vmid }}) - {{ vm.ip }}
+          {% endfor %}
+
+          WORKSTATIONS (VLAN 130):
+          {% for vm in vms | selectattr('category', 'equalto', 'workstations') %}
+          ✓ {{ vm.name }} (VM {{ vm.vmid }}) - {{ vm.ip }}
+          {% endfor %}
+
+          DMZ (VLAN 150):
+          {% for vm in vms | selectattr('category', 'equalto', 'dmz') %}
+          ✓ {{ vm.name }} (VM {{ vm.vmid }}) - {{ vm.ip }}
+          {% endfor %}
+
+          ========================================
+          NEXT STEPS
+          ========================================
+
+          1. Start VMs by category:
+
+             Management:
+             {% for vm in vms | selectattr('category', 'equalto', 'management') %}
+             qm start {{ vm.vmid }}  # {{ vm.name }}
+             {% endfor %}
+
+             Servers:
+             {% for vm in vms | selectattr('category', 'equalto', 'servers') %}
+             qm start {{ vm.vmid }}  # {{ vm.name }}
+             {% endfor %}
+
+             DMZ:
+             {% for vm in vms | selectattr('category', 'equalto', 'dmz') %}
+             qm start {{ vm.vmid }}  # {{ vm.name }}
+             {% endfor %}
+
+          2. Or use the generated startup scripts:
+             bash scripts/start-all-infrastructure.sh
+
+          3. Verify VMs are running:
+             qm list | grep -E "110|111|112|113|200|201|210|220|230|240|300|400|410|420"
+
+          4. Test connectivity (wait 60s after starting):
+             {% for vm in vms %}
+             ping -c 2 {{ vm.ip }}  # {{ vm.name }}
+             {% endfor %}
+
+          5. SSH into VMs (default cloud-init users):
+             ssh ubuntu@10.0.110.10  # Ubuntu VMs
+             ssh debian@10.0.120.10  # Debian VMs
+
+          ========================================
+      tags: always
+
+    # ========================================================================
+    # Create Management Scripts
+    # ========================================================================
+
+    - name: Create startup script for all VMs
+      delegate_to: localhost
+      copy:
+        dest: "{{ playbook_dir }}/../scripts/start-all-infrastructure.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          ################################################################################
+          # Script: start-all-infrastructure.sh
+          # Purpose: Start all infrastructure VMs in correct order
+          # Created: {{ ansible_date_time.date }}
+          ################################################################################
+
+          echo "Starting infrastructure VMs..."
+          echo ""
+
+          # Start management VMs first
+          echo "=== Starting Management VMs (VLAN 110) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'management') | sort(attribute='vmid') %}
+          echo "Starting {{ vm.name }} ({{ vm.vmid }})..."
+          qm start {{ vm.vmid }}
+          sleep 3
+          {% endfor %}
+
+          echo ""
+          echo "Waiting for management VMs to initialize (20 seconds)..."
+          sleep 20
+
+          # Start production servers
+          echo ""
+          echo "=== Starting Production Servers (VLAN 120) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'servers') | sort(attribute='vmid') %}
+          echo "Starting {{ vm.name }} ({{ vm.vmid }})..."
+          qm start {{ vm.vmid }}
+          sleep 3
+          {% endfor %}
+
+          echo ""
+          echo "Waiting for servers to initialize (20 seconds)..."
+          sleep 20
+
+          # Start DMZ services
+          echo ""
+          echo "=== Starting DMZ Services (VLAN 150) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'dmz') | sort(attribute='vmid') %}
+          echo "Starting {{ vm.name }} ({{ vm.vmid }})..."
+          qm start {{ vm.vmid }}
+          sleep 3
+          {% endfor %}
+
+          echo ""
+          echo "All infrastructure VMs started!"
+          echo ""
+          echo "VM Status:"
+          qm list | grep -E "VMID|{% for vm in vms %}{{ vm.vmid }}{% if not loop.last %}|{% endif %}{% endfor %}"
+
+          echo ""
+          echo "Waiting for cloud-init to complete (40 seconds)..."
+          sleep 40
+
+          echo ""
+          echo "Testing connectivity:"
+          {% for vm in vms %}
+          ping -c 2 {{ vm.ip }} >/dev/null 2>&1 && echo "✓ {{ vm.name }} ({{ vm.ip }}) is reachable" || echo "✗ {{ vm.name }} ({{ vm.ip }}) is not reachable"
+          {% endfor %}
+
+          echo ""
+          echo "Infrastructure deployment complete!"
+      tags: always
+
+    - name: Create shutdown script for all VMs
+      delegate_to: localhost
+      copy:
+        dest: "{{ playbook_dir }}/../scripts/stop-all-infrastructure.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          ################################################################################
+          # Script: stop-all-infrastructure.sh
+          # Purpose: Stop all infrastructure VMs in reverse order
+          # Created: {{ ansible_date_time.date }}
+          ################################################################################
+
+          echo "Stopping infrastructure VMs..."
+          echo ""
+
+          # Stop in reverse order (DMZ, Servers, Management)
+          echo "=== Stopping DMZ Services (VLAN 150) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'dmz') | sort(attribute='vmid', reverse=true) %}
+          echo "Stopping {{ vm.name }} ({{ vm.vmid }})..."
+          qm stop {{ vm.vmid }}
+          sleep 2
+          {% endfor %}
+
+          echo ""
+          echo "=== Stopping Production Servers (VLAN 120) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'servers') | sort(attribute='vmid', reverse=true) %}
+          echo "Stopping {{ vm.name }} ({{ vm.vmid }})..."
+          qm stop {{ vm.vmid }}
+          sleep 2
+          {% endfor %}
+
+          echo ""
+          echo "=== Stopping Management VMs (VLAN 110) ==="
+          {% for vm in vms | selectattr('category', 'equalto', 'management') | sort(attribute='vmid', reverse=true) %}
+          echo "Stopping {{ vm.name }} ({{ vm.vmid }})..."
+          qm stop {{ vm.vmid }}
+          sleep 2
+          {% endfor %}
+
+          echo ""
+          echo "All infrastructure VMs stopped!"
+      tags: always
+
+    - name: Create VM inventory list
+      delegate_to: localhost
+      copy:
+        dest: "{{ playbook_dir }}/../docs/infrastructure-vm-inventory.md"
+        mode: '0644'
+        content: |
+          # Infrastructure VM Inventory
+
+          **Generated:** {{ ansible_date_time.iso8601 }}
+          **Total VMs:** {{ vms | length }}
+
+          ## Management Infrastructure (VLAN 110)
+
+          | VMID | Hostname | IP Address | Purpose | OS |
+          |------|----------|------------|---------|-----|
+          {% for vm in vms | selectattr('category', 'equalto', 'management') | sort(attribute='vmid') %}
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          {% endfor %}
+
+          ## Production Servers (VLAN 120)
+
+          | VMID | Hostname | IP Address | Purpose | OS |
+          |------|----------|------------|---------|-----|
+          {% for vm in vms | selectattr('category', 'equalto', 'servers') | sort(attribute='vmid') %}
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          {% endfor %}
+
+          ## Workstations (VLAN 130)
+
+          | VMID | Hostname | IP Address | Purpose | OS |
+          |------|----------|------------|---------|-----|
+          {% for vm in vms | selectattr('category', 'equalto', 'workstations') | sort(attribute='vmid') %}
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          {% endfor %}
+
+          ## DMZ Services (VLAN 150)
+
+          | VMID | Hostname | IP Address | Purpose | OS |
+          |------|----------|------------|---------|-----|
+          {% for vm in vms | selectattr('category', 'equalto', 'dmz') | sort(attribute='vmid') %}
+          | {{ vm.vmid }} | {{ vm.name }} | {{ vm.ip }} | {{ vm.description.split('\n')[2] | trim }} | {{ 'Ubuntu 22.04' if vm.template == 9000 else 'Debian 12' if vm.template == 9100 else 'Rocky 9' }} |
+          {% endfor %}
+
+          ## Quick Reference
+
+          **SSH Access:**
+          ```bash
+          # Ubuntu VMs (default user: ubuntu)
+          {% for vm in vms | selectattr('template', 'equalto', 9000) %}
+          ssh ubuntu@{{ vm.ip }}  # {{ vm.name }}
+          {% endfor %}
+
+          # Debian VMs (default user: debian)
+          {% for vm in vms | selectattr('template', 'equalto', 9100) %}
+          ssh debian@{{ vm.ip }}  # {{ vm.name }}
+          {% endfor %}
+          ```
+
+          **Proxmox Tags Applied:**
+          {% for vm in vms | sort(attribute='vmid') %}
+          - {{ vm.name }}: `{{ vm.proxmox_tags }}`
+          {% endfor %}
+      tags: always
