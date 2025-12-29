@@ -3,7 +3,7 @@ title: Welcome to the SMB Office IT Blueprint
 description: A simulated SMB IT environment designed for both technical and business documentation, training, and automation.
 ---
 
-# SMB Office IT Blueprint
+
 
 Welcome to the **Simulated Small Business IT Blueprint**, a complete, production-grade lab environment that showcases:
 
