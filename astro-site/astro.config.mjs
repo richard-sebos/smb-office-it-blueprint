@@ -5,7 +5,7 @@ export default defineConfig({
   base: '/smb-office-it-blueprint/',
   integrations: [
     starlight({
-      title: 'SMB Office IT Blueprint',
+      title: 'Linux Corporate Desktop',
       social: [
         {
           icon: 'github',
@@ -15,7 +15,7 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: 'Getting Started',
+          label: 'Posts',
           items: [
             { label: 'Overview', slug: 'index' }
           ]
