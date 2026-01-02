@@ -1,0 +1,8 @@
+---
+################################################################################
+# Default variables for proxmox_vm_deploy role
+################################################################################
+
+# Set proper PATH for Proxmox commands
+proxmox_environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

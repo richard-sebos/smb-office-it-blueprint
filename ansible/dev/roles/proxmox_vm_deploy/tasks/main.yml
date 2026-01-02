@@ -14,6 +14,7 @@
   delegate_to: pve
   register: vm_exists
   changed_when: false
+  environment: "{{ proxmox_environment }}"
 
 - name: Clone VM from template
   shell: |
@@ -23,6 +24,7 @@
       --full
   delegate_to: pve
   when: vm_exists.stdout == ""
+  environment: "{{ proxmox_environment }}"
 
 - name: Configure VM resources
   shell: |
@@ -30,18 +32,21 @@
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
   delegate_to: pve
+  environment: "{{ proxmox_environment }}"
 
 - name: Resize VM disk
   shell: |
     {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
   delegate_to: pve
   when: vm_exists.stdout == ""
+  environment: "{{ proxmox_environment }}"
 
 - name: Configure VM network
   shell: |
     {{ qm_cmd }} set {{ vmid }} \
       --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
   delegate_to: pve
+  environment: "{{ proxmox_environment }}"
 
 - name: Configure cloud-init network settings
   shell: |
@@ -50,6 +55,7 @@
       --nameserver {{ network.dns_servers | join(',') }} \
       --searchdomain {{ network.search_domain }}
   delegate_to: pve
+  environment: "{{ proxmox_environment }}"
 
 - name: Set VM description
   shell: |
@@ -63,11 +69,13 @@
 
     Managed by Ansible"
   delegate_to: pve
+  environment: "{{ proxmox_environment }}"
 
 - name: Apply Proxmox tags
   shell: |
     {{ qm_cmd }} set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
   delegate_to: pve
+  environment: "{{ proxmox_environment }}"
 
 - name: Ensure resource pool exists
   shell: |
@@ -77,6 +85,7 @@
   register: pool_check
   changed_when: "'created' in pool_check.stdout"
   failed_when: false
+  environment: "{{ proxmox_environment }}"
 
 - name: Add VM to resource pool
   shell: |
@@ -86,6 +95,7 @@
   failed_when:
     - pool_result.rc != 0
     - "'already exists' not in pool_result.stderr"
+  environment: "{{ proxmox_environment }}"
 
 - name: Start VM
   shell: |
@@ -95,6 +105,7 @@
   failed_when:
     - vm_start.rc != 0
     - "'already running' not in vm_start.stderr"
+  environment: "{{ proxmox_environment }}"
 
 - name: Wait for VM to boot
   pause:
