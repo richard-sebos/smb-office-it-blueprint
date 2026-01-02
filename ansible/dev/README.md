@@ -26,18 +26,22 @@ ansible/dev/
 
 ### Initial Setup
 
-1. **Set up Proxmox credentials:**
+1. **Set up SSH access to Proxmox:**
+   ```bash
+   # Copy your SSH key to Proxmox host
+   ssh-copy-id root@192.168.35.20
+
+   # Test connection
+   ssh root@192.168.35.20 "qm list"
+   ```
+
+2. **Configure Proxmox host:**
    ```bash
    cd ansible/dev
    cp .env.example .env
-   # Edit .env with your Proxmox password
+   # Edit .env if your Proxmox host IP is different
    vim .env
    source .env
-   ```
-
-2. **Install required Ansible collections:**
-   ```bash
-   ansible-galaxy collection install community.general
    ```
 
 ### Deploy and Configure ws-admin01
@@ -49,16 +53,7 @@ source .env
 ansible-playbook playbooks/deploy-and-configure-ws-admin01.yml
 ```
 
-**Option 2: Deploy then configure separately**
-```bash
-# Deploy VM on Proxmox
-ansible-playbook playbooks/deploy-ws-admin01.yml
-
-# Configure the VM
-ansible-playbook playbooks/configure-ws-admin01-roles.yml
-```
-
-**Option 3: Configure existing VM**
+**Option 2: Configure existing VM**
 ```bash
 # If VM already exists and is accessible
 ansible ws-admin01 -m ping

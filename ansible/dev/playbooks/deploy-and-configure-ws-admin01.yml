@@ -1,11 +1,52 @@
 ---
 ################################################################################
 # Playbook: Deploy and Configure ws-admin01
-# Purpose: Complete VM deployment and configuration in one playbook
+# Purpose: Complete VM deployment and configuration
 ################################################################################
 
-- name: Deploy VM on Proxmox
-  import_playbook: deploy-ws-admin01.yml
+- name: Deploy and Configure ws-admin01
+  hosts: ws-admin01
+  gather_facts: no
 
-- name: Configure VM
-  import_playbook: configure-ws-admin01-roles.yml
+  vars:
+    proxmox_host: "{{ lookup('env', 'PROXMOX_HOST') | default('192.168.35.20', true) }}"
+
+  roles:
+    # Deploy VM on Proxmox
+    - role: proxmox_vm_deploy
+      delegate_to: localhost
+
+  tasks:
+    - name: Gather facts after deployment
+      setup:
+
+    - name: Import configuration roles
+      include_role:
+        name: "{{ item }}"
+      loop:
+        - network_config
+        - hostname_config
+        - system_update
+        - install_packages
+        - user_config
+        - ssh_config
+        - ssh_hardening
+        - service_config
+      become: yes
+
+  post_tasks:
+    - name: Display configuration summary
+      debug:
+        msg:
+          - "========================================="
+          - "VM Configuration Complete!"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "IP: {{ network.ip_address }}/{{ network.netmask }}"
+          - "VLAN: {{ network.vlan }}"
+          - "Gateway: {{ network.gateway }}"
+          - "DNS: {{ network.dns_servers }}"
+          - "========================================="
+          - "Next steps:"
+          - "  ssh {{ admin_user.username }}@{{ network.ip_address }}"
+          - "========================================="

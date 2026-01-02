@@ -2,17 +2,18 @@
 
 ## Deploy ws-admin01 from Scratch
 
-### 1. Set up credentials
+### 1. Set up SSH access to Proxmox
+```bash
+ssh-copy-id root@192.168.35.20
+ssh root@192.168.35.20 "qm list"
+```
+
+### 2. Configure environment
 ```bash
 cd ansible/dev
 cp .env.example .env
-vim .env  # Add your Proxmox password
+vim .env  # Update PROXMOX_HOST if needed
 source .env
-```
-
-### 2. Install Ansible collections
-```bash
-ansible-galaxy collection install community.general
 ```
 
 ### 3. Deploy and configure
