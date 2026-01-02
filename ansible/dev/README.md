@@ -18,12 +18,8 @@ ansible/dev/
 │   ├── ssh_config/               # Basic SSH configuration
 │   ├── ssh_hardening/            # Modular SSH security policies
 │   └── service_config/           # Service management
-├── playbooks/
-│   ├── configure-ws-admin01.yml       # Original monolithic playbook
-│   └── configure-ws-admin01-roles.yml # New role-based playbook
-└── templates/                     # Legacy templates (now in roles)
-    ├── netplan-static.j2
-    └── nmconnection-static.j2
+└── playbooks/
+    └── configure-ws-admin01-roles.yml # Role-based playbook
 ```
 
 ## Usage
@@ -38,7 +34,7 @@ cd ansible/dev
 # Test connectivity
 ansible ws-admin01 -m ping
 
-# Run role-based configuration playbook (recommended)
+# Run configuration playbook
 ansible-playbook playbooks/configure-ws-admin01-roles.yml
 
 # Run with verbose output
