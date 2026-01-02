@@ -1,0 +1,88 @@
+---
+################################################################################
+# Host Variables: ws-admin01
+# VM ID: 300
+# Role: Admin Workstation
+################################################################################
+
+# VM Identity
+vmid: 300
+hostname: ws-admin01
+fqdn: ws-admin01.corp.company.local
+
+# Network Configuration
+network:
+  interface: ens18
+  ip_address: 10.0.130.10
+  netmask: 24
+  gateway: 10.0.130.1
+  vlan: 130
+  dns_servers:
+    - 10.0.120.10  # dc01
+    - 10.0.120.11  # dc02
+  search_domain: corp.company.local
+
+# OS Configuration
+os_type: ubuntu  # ubuntu or rocky
+os_version: "22.04"
+template_id: 9250  # Ubuntu Desktop template
+
+# System Resources
+resources:
+  cores: 2
+  memory: 4096
+  disk_size: 90G
+
+# Proxmox Settings
+proxmox:
+  node: pve
+  storage: vmDrive
+  pool: production
+  tags:
+    - workstation
+    - admin
+    - privileged-access
+    - ubuntu
+    - vlan-130
+    - monitored
+
+# Software Packages
+packages:
+  base:
+    - vim
+    - git
+    - curl
+    - wget
+    - net-tools
+    - htop
+    - tmux
+    - tree
+
+  admin_tools:
+    - ansible
+    - python3-pip
+    - sshpass
+    - remmina
+    - remmina-plugin-rdp
+    - remmina-plugin-vnc
+
+  desktop:
+    - firefox
+    - chromium-browser
+    - terminator
+    - code  # VS Code
+
+# User Configuration
+admin_user:
+  username: richard
+  groups:
+    - sudo
+    - adm
+  shell: /bin/bash
+
+# Services
+services:
+  enabled:
+    - ssh
+  disabled:
+    - bluetooth
