@@ -5,17 +5,30 @@
 ################################################################################
 
 - name: Find qm command location
-  shell: "which qm || find /usr -name qm -type f 2>/dev/null | head -1"
+  shell: |
+    if command -v qm >/dev/null 2>&1; then
+      command -v qm
+    elif [ -x /usr/sbin/qm ]; then
+      echo /usr/sbin/qm
+    elif [ -x /usr/bin/qm ]; then
+      echo /usr/bin/qm
+    else
+      find /usr -name qm -type f -executable 2>/dev/null | head -1
+    fi
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
-  register: qm_path
+  register: qm_path_result
   changed_when: false
+
+- name: Display found qm path for debugging
+  debug:
+    msg: "Found qm at: {{ qm_path_result.stdout }}"
 
 - name: Set qm and pvesh command paths
   set_fact:
-    qm_cmd: "{{ qm_path.stdout | trim }}"
-    pvesh_cmd: "{{ qm_path.stdout | trim | regex_replace('qm$', 'pvesh') }}"
+    qm_cmd: "{{ qm_path_result.stdout | trim }}"
+    pvesh_cmd: "{{ (qm_path_result.stdout | trim | dirname) }}/pvesh"
 
 - name: Check if VM already exists
   shell: "{{ qm_cmd }} list | grep -w '{{ vmid }}' || true"
