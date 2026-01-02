@@ -15,9 +15,7 @@
     else
       find /usr -name qm -type f -executable 2>/dev/null | head -1
     fi
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   register: qm_path_result
   changed_when: false
 
