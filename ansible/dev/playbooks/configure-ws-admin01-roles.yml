@@ -16,6 +16,7 @@
     - install_packages
     - user_config
     - ssh_config
+    - ssh_hardening
     - service_config
 
   post_tasks:

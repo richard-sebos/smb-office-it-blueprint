@@ -1,0 +1,85 @@
+---
+################################################################################
+# Role: ssh_hardening
+# Purpose: Apply modular SSH security policies
+################################################################################
+
+- name: Ensure sshd_config.d directory exists
+  file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable Include directive in main sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Include\s+/etc/ssh/sshd_config.d/\*.conf'
+    line: 'Include /etc/ssh/sshd_config.d/*.conf'
+    insertbefore: '^Match'
+    backup: yes
+  notify: Restart SSH
+
+- name: Deploy SSH policy - Session timeout and CVE mitigation
+  template:
+    src: 06-session.conf.j2
+    dest: /etc/ssh/sshd_config.d/06-session.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Deploy SSH policy - Authentication restrictions
+  template:
+    src: 07-authentication.conf.j2
+    dest: /etc/ssh/sshd_config.d/07-authentication.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Deploy SSH policy - Access control
+  template:
+    src: 08-access-control.conf.j2
+    dest: /etc/ssh/sshd_config.d/08-access-control.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+  when: ssh_hardening.allowed_networks is defined
+
+- name: Deploy SSH policy - Disable forwarding
+  template:
+    src: 10-forwarding.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-forwarding.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Deploy SSH policy - Hardening
+  template:
+    src: 99-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Ensure ssh-users group exists
+  group:
+    name: ssh-users
+    state: present
+
+- name: Add admin user to ssh-users group
+  user:
+    name: "{{ admin_user.username }}"
+    groups: ssh-users
+    append: yes
+  when: admin_user is defined

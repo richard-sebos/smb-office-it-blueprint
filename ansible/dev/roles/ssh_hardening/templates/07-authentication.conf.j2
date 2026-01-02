@@ -1,0 +1,49 @@
+## 07-authentication.conf
+# -----------------------------------------
+# Root Access and Group-Based Restrictions
+# -----------------------------------------
+
+# Disables direct SSH login as root user to reduce risk of privileged account compromise.
+PermitRootLogin no
+
+# Only users belonging to the 'ssh-users' group are allowed to connect via SSH.
+# This enables centralized access control using Unix groups.
+AllowGroups ssh-users
+
+
+# -------------------------------
+# Basic Authentication Hardening
+# -------------------------------
+
+# Prevents users from logging in with empty passwords.
+PermitEmptyPasswords no
+
+# Limits the number of authentication attempts per connection to 3.
+# Helps prevent brute-force password guessing attacks.
+MaxAuthTries 3
+
+# Restricts the number of concurrent open sessions per connection to 2.
+# Useful to prevent abuse of multiplexed SSH sessions.
+MaxSessions 2
+
+
+# ----------------------------------------------
+# Enforce Key-Based Authentication (No Passwords)
+# ----------------------------------------------
+
+# Disables traditional password-based login.
+# Only public key authentication will be accepted.
+PasswordAuthentication no
+
+# Disables challenge-response (e.g., keyboard-interactive) authentication.
+# Further enforces exclusive use of key-based login.
+ChallengeResponseAuthentication no
+
+
+# -------------------------------------
+# Enforce Secure File Permissions Checks
+# -------------------------------------
+
+# Enables strict checking of user's ~/.ssh and related file permissions.
+# Prevents logins if insecure permissions are detected, reducing the risk of key theft.
+StrictModes yes

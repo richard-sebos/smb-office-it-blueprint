@@ -81,9 +81,10 @@ packages:
 admin_user:
   username: richard
   groups:
-    - sudo
+    - wheel  # Rocky Linux sudo group
     - adm
   shell: /bin/bash
+  ssh_public_key_path: ~/.ssh/id_rsa.pub  # Path to public key on control machine
 
 # Services
 services:
@@ -91,3 +92,13 @@ services:
     - ssh
   disabled:
     - bluetooth
+
+# SSH Hardening Configuration
+ssh_hardening:
+  # Optional: Define allowed networks for SSH access
+  # If not defined, access is allowed from all networks (rely on firewall)
+  allowed_networks:
+    - cidr: 10.0.0.0/8
+      description: Internal private network
+    - cidr: 192.168.0.0/16
+      description: Private network range

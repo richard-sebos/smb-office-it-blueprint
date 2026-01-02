@@ -1,0 +1,9 @@
+## 99-hardening.conf
+# ------------------------------------------------------------
+# Disable User-Controlled Environment Variables
+# ------------------------------------------------------------
+
+# Prevents users from setting environment variables via ~/.ssh/environment
+# or through SSH commands, which could be exploited to alter execution behavior,
+# bypass security policies, or inject malicious settings.
+PermitUserEnvironment no

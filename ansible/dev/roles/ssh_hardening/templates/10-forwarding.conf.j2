@@ -1,0 +1,28 @@
+## 10-forwarding.conf
+# ---------------------------------------------
+# Disable All SSH Forwarding and Tunneling
+# ---------------------------------------------
+
+# Disables TCP port forwarding to prevent users from creating encrypted tunnels
+# that could be used to bypass firewalls or access internal services.
+AllowTcpForwarding no
+
+# Disables Unix domain socket forwarding (e.g., for interprocess communication).
+# Adds an additional layer of restriction for local stream forwarding.
+AllowStreamLocalForwarding no
+
+# Prevents forwarding of the SSH authentication agent.
+# Protects against credential theft via agent hijacking on shared systems.
+AllowAgentForwarding no
+
+# Disables creation of VPN-like tunnels using SSH.
+# Helps enforce strict network boundaries and prevent lateral movement.
+PermitTunnel no
+
+# Prevents binding forwarded ports to non-loopback addresses (e.g., 0.0.0.0),
+# which could expose services to external networks if port forwarding were enabled.
+GatewayPorts no
+
+# Disables X11 forwarding to block graphical interface redirection over SSH,
+# reducing risk of remote GUI attacks or accidental exposure.
+X11Forwarding no

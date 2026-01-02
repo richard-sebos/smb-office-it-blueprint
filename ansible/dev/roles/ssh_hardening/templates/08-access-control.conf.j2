@@ -1,0 +1,35 @@
+## 08-access-control.conf
+# -----------------------------------------------
+# SSH Access Control by IP Address or Subnet
+# -----------------------------------------------
+
+# Allow SSH access **only** from trusted internal networks:
+{% if ssh_hardening.allowed_networks is defined %}
+{% for network in ssh_hardening.allowed_networks %}
+# {{ network.description | default('Allowed network') }}
+{% endfor %}
+Match Address {{ ssh_hardening.allowed_networks | map(attribute='cidr') | join(',') }}
+    AllowGroups ssh-users
+{% else %}
+# No network restrictions defined - all networks allowed
+# Define ssh_hardening.allowed_networks in host_vars to restrict access
+{% endif %}
+
+# -------------------------------------------------------
+# Optional: Apply additional restrictions to specific IPs
+# -------------------------------------------------------
+
+# Uncomment and customize to enforce stricter rules per host or IP.
+# For example, enforce no root login and key-based authentication only
+# for a specific host (192.168.100.50):
+#
+# Match Address 192.168.100.50
+#     PermitRootLogin no
+#     PasswordAuthentication no
+
+# ------------------------------------------------------------------
+# Note: Denying access from all other IPs is **not** handled here.
+# ------------------------------------------------------------------
+# sshd_config does not support a "deny all except" approach.
+# To block untrusted IPs, use a firewall (e.g., firewalld, nftables, or iptables)
+# to explicitly allow known IPs and drop everything else at the network level.

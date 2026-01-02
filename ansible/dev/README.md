@@ -15,7 +15,8 @@ ansible/dev/
 │   ├── system_update/            # OS updates
 │   ├── install_packages/         # Package installation
 │   ├── user_config/              # User and sudo setup
-│   ├── ssh_config/               # SSH configuration
+│   ├── ssh_config/               # Basic SSH configuration
+│   ├── ssh_hardening/            # Modular SSH security policies
 │   └── service_config/           # Service management
 ├── playbooks/
 │   ├── configure-ws-admin01.yml       # Original monolithic playbook
@@ -84,8 +85,25 @@ Each VM has its own `host_vars/<hostname>.yml` file containing:
 - **Resources**: CPU, memory, disk
 - **Proxmox**: Tags, pool, storage
 - **Packages**: Lists of packages to install
-- **Users**: Admin user configuration
+- **Users**: Admin user configuration and SSH key path
 - **Services**: Services to enable/disable
+
+### SSH Key Setup
+
+The playbook can deploy your SSH public key to the admin user's authorized_keys:
+
+1. Generate SSH key pair on your control machine (if needed):
+   ```bash
+   ssh-keygen -t ed25519 -C "your-email@example.com"
+   ```
+
+2. Specify the public key path in `host_vars/<hostname>.yml`:
+   ```yaml
+   admin_user:
+     ssh_public_key_path: ~/.ssh/id_ed25519.pub
+   ```
+
+3. The playbook will automatically deploy the key during configuration
 
 ## Network Configuration
 
@@ -102,8 +120,9 @@ Each role is independent and can be used across different VMs:
 - **hostname_config**: Sets hostname and updates /etc/hosts
 - **system_update**: Updates all system packages
 - **install_packages**: Installs base, network tools, admin tools, and desktop packages
-- **user_config**: Creates admin user with sudo access
+- **user_config**: Creates admin user with sudo access and deploys SSH keys
 - **ssh_config**: Enables and configures SSH service
+- **ssh_hardening**: Applies modular SSH security policies (CVE mitigation, key-only auth, no forwarding)
 - **service_config**: Enables/disables system services
 
 ## Current VMs

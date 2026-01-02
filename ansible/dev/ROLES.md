@@ -86,7 +86,7 @@ packages:
 ---
 
 ### user_config
-**Purpose:** Create admin user with sudo access
+**Purpose:** Create admin user with sudo access and deploy SSH keys
 
 **Required Variables:**
 ```yaml
@@ -96,11 +96,19 @@ admin_user:
     - sudo  # Ubuntu
     - wheel # Rocky
   shell: /bin/bash
+  ssh_public_key_path: ~/.ssh/id_rsa.pub  # Path on control machine
 ```
 
-**Notes:**
+**Features:**
+- Creates admin user
 - Configures NOPASSWD sudo access
-- Creates sudoers.d file for the user
+- Creates .ssh directory with proper permissions
+- Deploys SSH public key to authorized_keys
+
+**Notes:**
+- `ssh_public_key_path` is optional - if not defined, key deployment is skipped
+- Path is relative to the Ansible control machine (where you run ansible-playbook)
+- Supports tilde (~) expansion for home directory
 
 ---
 
@@ -114,6 +122,49 @@ admin_user:
 
 **Handlers:**
 - Restart SSH (triggered on config changes)
+
+---
+
+### ssh_hardening
+**Purpose:** Apply modular SSH security policies using sshd_config.d
+
+**Features:**
+- Session timeout and keepalive settings
+- CVE-2024-6387 mitigation (LoginGraceTime 0)
+- Brute-force protection (MaxStartups)
+- Key-based authentication only (no passwords)
+- Group-based access control (ssh-users group)
+- Disable all forwarding and tunneling
+- Disable user environment variables
+- Optional network-based access restrictions
+
+**Required Variables:**
+```yaml
+admin_user:
+  username: richard  # User to add to ssh-users group
+
+ssh_hardening:
+  allowed_networks:  # Optional
+    - cidr: 10.0.0.0/8
+      description: Internal network
+    - cidr: 192.168.0.0/16
+      description: Private range
+```
+
+**Policy Files Created:**
+- `06-session.conf` - Session timeouts, keepalives, CVE mitigation
+- `07-authentication.conf` - Authentication restrictions, key-only login
+- `08-access-control.conf` - Network-based access control (optional)
+- `10-forwarding.conf` - Disable all forwarding/tunneling
+- `99-hardening.conf` - Environment variable restrictions
+
+**Notes:**
+- Creates `ssh-users` group automatically
+- Adds admin user to ssh-users group
+- Validates all configs before applying
+- Backs up main sshd_config before modification
+- All policy files are located in `/etc/ssh/sshd_config.d/`
+- **IMPORTANT**: Ensure SSH key is deployed before applying this role, as password auth is disabled
 
 ---
 
@@ -154,6 +205,7 @@ services:
     - install_packages
     - user_config
     - ssh_config
+    - ssh_hardening
     - service_config
 ```
 
@@ -174,9 +226,10 @@ Recommended role order:
 2. `hostname_config` - Set hostname
 3. `system_update` - Update packages before installing new ones
 4. `install_packages` - Install required software
-5. `user_config` - Create users
-6. `ssh_config` - Configure remote access
-7. `service_config` - Final service configuration
+5. `user_config` - Create users and deploy SSH keys
+6. `ssh_config` - Basic SSH configuration
+7. `ssh_hardening` - Apply security policies (after keys are deployed)
+8. `service_config` - Final service configuration
 
 ## Adding New Roles
 

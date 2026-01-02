@@ -1,0 +1,33 @@
+## 06-session.conf
+# -----------------------------
+# SSH Session Timeout Settings
+# -----------------------------
+
+# Sends a "keepalive" message every 300 seconds (5 minutes) to verify the client is still responsive.
+ClientAliveInterval 300
+
+# If the client fails to respond to 0 keepalive messages (i.e., first failure triggers disconnect).
+# Setting this to 0 means the connection will be closed immediately after the first missed response.
+ClientAliveCountMax 0
+
+# Disables TCP keepalive messages at the operating system level to reduce potential detection/exploitation.
+TCPKeepAlive no
+
+
+# -----------------------------
+# CVE Mitigation
+# -----------------------------
+
+# Set to 0 to immediately drop unauthenticated connections that don't complete login,
+# mitigating CVE-2024-6387 (a race condition in login grace handling).
+LoginGraceTime 0
+
+
+# -----------------------------
+# Brute-force Mitigation
+# -----------------------------
+
+# Limits unauthenticated SSH connection attempts:
+# - Allows 3 unauthenticated connections initially.
+# - Gradually throttles new connection attempts (up to 30) using a rate of 1 every 10 seconds.
+MaxStartups 3:30:10

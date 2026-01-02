@@ -18,3 +18,18 @@
     create: yes
     validate: 'visudo -cf %s'
     mode: '0440'
+
+- name: Ensure .ssh directory exists for admin user
+  file:
+    path: /home/{{ admin_user.username }}/.ssh
+    state: directory
+    owner: "{{ admin_user.username }}"
+    group: "{{ admin_user.username }}"
+    mode: '0700'
+
+- name: Deploy SSH public key for admin user
+  authorized_key:
+    user: "{{ admin_user.username }}"
+    key: "{{ lookup('file', admin_user.ssh_public_key_path) }}"
+    state: present
+  when: admin_user.ssh_public_key_path is defined
