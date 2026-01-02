@@ -1,0 +1,20 @@
+---
+################################################################################
+# Role: user_config
+# Purpose: Configure admin user and sudo access
+################################################################################
+
+- name: Ensure admin user exists
+  user:
+    name: "{{ admin_user.username }}"
+    groups: "{{ admin_user.groups }}"
+    shell: "{{ admin_user.shell }}"
+    append: yes
+
+- name: Configure sudo access
+  lineinfile:
+    path: /etc/sudoers.d/{{ admin_user.username }}
+    line: "{{ admin_user.username }} ALL=(ALL) NOPASSWD:ALL"
+    create: yes
+    validate: 'visudo -cf %s'
+    mode: '0440'

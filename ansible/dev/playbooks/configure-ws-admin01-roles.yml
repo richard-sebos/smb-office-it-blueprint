@@ -1,0 +1,30 @@
+---
+################################################################################
+# Playbook: Configure ws-admin01 (Admin Workstation) - Using Roles
+# Purpose: Complete configuration of the admin workstation using reusable roles
+################################################################################
+
+- name: Configure Admin Workstation
+  hosts: ws-admin01
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - network_config
+    - hostname_config
+    - system_update
+    - install_packages
+    - user_config
+    - ssh_config
+    - service_config
+
+  post_tasks:
+    - name: Display network configuration
+      debug:
+        msg:
+          - "Hostname: {{ hostname }}"
+          - "FQDN: {{ fqdn }}"
+          - "IP Address: {{ network.ip_address }}/{{ network.netmask }}"
+          - "Gateway: {{ network.gateway }}"
+          - "DNS Servers: {{ network.dns_servers }}"
+          - "VLAN: {{ network.vlan }}"

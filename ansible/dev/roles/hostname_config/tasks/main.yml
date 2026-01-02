@@ -1,0 +1,18 @@
+---
+################################################################################
+# Role: hostname_config
+# Purpose: Configure system hostname and /etc/hosts
+################################################################################
+
+- name: Set hostname
+  hostname:
+    name: "{{ hostname }}"
+
+- name: Update /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ fqdn }} {{ hostname }}"
+    owner: root
+    group: root
+    mode: '0644'

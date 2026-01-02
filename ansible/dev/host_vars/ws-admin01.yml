@@ -13,19 +13,19 @@ fqdn: ws-admin01.corp.company.local
 # Network Configuration
 network:
   interface: ens18
-  ip_address: 10.0.130.10
+  ip_address: 10.0.131.10
   netmask: 24
-  gateway: 10.0.130.1
-  vlan: 130
+  gateway: 10.0.131.1
+  vlan: 131
   dns_servers:
     - 10.0.120.10  # dc01
     - 10.0.120.11  # dc02
   search_domain: corp.company.local
 
 # OS Configuration
-os_type: ubuntu  # ubuntu or rocky
-os_version: "22.04"
-template_id: 9250  # Ubuntu Desktop template
+os_type: rocky  # ubuntu or rocky
+os_version: "9"
+template_id: 9275  # Rocky Linux 9 template
 
 # System Resources
 resources:
@@ -58,19 +58,24 @@ packages:
     - tmux
     - tree
 
+  network_tools:
+    - tcpdump
+    - wireshark
+    - wireshark-cli  # tshark
+    - nmap
+    - nmap-ncat  # nc for Rocky
+    - net-tools  # netstat
+
   admin_tools:
     - ansible
     - python3-pip
     - sshpass
-    - remmina
-    - remmina-plugin-rdp
-    - remmina-plugin-vnc
 
   desktop:
     - firefox
-    - chromium-browser
-    - terminator
-    - code  # VS Code
+    - remmina
+    - remmina-plugins-rdp
+    - remmina-plugins-vnc
 
 # User Configuration
 admin_user:

@@ -1,0 +1,18 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ network.interface }}:
+      dhcp4: no
+      addresses:
+        - {{ network.ip_address }}/{{ network.netmask }}
+      routes:
+        - to: default
+          via: {{ network.gateway }}
+      nameservers:
+        addresses:
+{% for dns in network.dns_servers %}
+          - {{ dns }}
+{% endfor %}
+        search:
+          - {{ network.search_domain }}

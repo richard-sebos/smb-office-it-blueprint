@@ -1,0 +1,17 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    ens18:
+      dhcp4: no
+      addresses:
+        - {{ vm_ip }}/{{ vm_netmask }}
+      routes:
+        - to: default
+          via: {{ vm_gateway }}
+      nameservers:
+        addresses:
+          - {{ vm_dns1 }}
+          - {{ vm_dns2 | default('8.8.8.8') }}
+        search:
+          - {{ domain_name }}

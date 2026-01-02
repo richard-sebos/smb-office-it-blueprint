@@ -1,0 +1,19 @@
+---
+################################################################################
+# Role: ssh_config
+# Purpose: Configure SSH service
+################################################################################
+
+- name: Ensure SSH is enabled and started
+  systemd:
+    name: sshd
+    enabled: yes
+    state: started
+
+- name: Configure SSH to allow password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication yes'
+    backup: yes
+  notify: Restart SSH

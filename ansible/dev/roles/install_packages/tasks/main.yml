@@ -1,0 +1,66 @@
+---
+################################################################################
+# Role: install_packages
+# Purpose: Install software packages for Ubuntu or Rocky Linux
+################################################################################
+
+- name: Install packages (Ubuntu)
+  when: os_type == "ubuntu"
+  block:
+    - name: Install base packages
+      apt:
+        name: "{{ packages.base }}"
+        state: present
+      when: packages.base is defined
+
+    - name: Install network tools
+      apt:
+        name: "{{ packages.network_tools }}"
+        state: present
+      when: packages.network_tools is defined
+
+    - name: Install admin tools
+      apt:
+        name: "{{ packages.admin_tools }}"
+        state: present
+      when: packages.admin_tools is defined
+
+    - name: Install desktop applications
+      apt:
+        name: "{{ packages.desktop }}"
+        state: present
+      when: packages.desktop is defined
+      ignore_errors: yes
+
+- name: Install packages (Rocky)
+  when: os_type == "rocky"
+  block:
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+
+    - name: Install base packages
+      dnf:
+        name: "{{ packages.base }}"
+        state: present
+      when: packages.base is defined
+
+    - name: Install network tools
+      dnf:
+        name: "{{ packages.network_tools }}"
+        state: present
+      when: packages.network_tools is defined
+
+    - name: Install admin tools
+      dnf:
+        name: "{{ packages.admin_tools }}"
+        state: present
+      when: packages.admin_tools is defined
+
+    - name: Install desktop applications
+      dnf:
+        name: "{{ packages.desktop }}"
+        state: present
+      when: packages.desktop is defined
+      ignore_errors: yes

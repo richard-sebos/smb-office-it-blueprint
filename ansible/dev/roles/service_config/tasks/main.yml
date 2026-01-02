@@ -1,0 +1,22 @@
+---
+################################################################################
+# Role: service_config
+# Purpose: Enable/disable system services
+################################################################################
+
+- name: Enable required services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop: "{{ services.enabled }}"
+  when: services.enabled is defined
+
+- name: Disable unnecessary services
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+    state: stopped
+  loop: "{{ services.disabled }}"
+  when: services.disabled is defined
+  ignore_errors: yes

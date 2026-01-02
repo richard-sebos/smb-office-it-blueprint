@@ -1,0 +1,70 @@
+---
+################################################################################
+# Role: network_config
+# Purpose: Configure static network settings for Ubuntu or Rocky Linux
+################################################################################
+
+- name: Configure static IP with netplan (Ubuntu)
+  when: os_type == "ubuntu"
+  block:
+    - name: Create netplan configuration
+      template:
+        src: netplan-static.j2
+        dest: /etc/netplan/01-netcfg.yaml
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Apply netplan configuration
+      command: netplan apply
+      register: netplan_result
+      changed_when: netplan_result.rc == 0
+
+- name: Configure static IP with NetworkManager (Rocky)
+  when: os_type == "rocky"
+  block:
+    - name: Check if NetworkManager connection file exists
+      stat:
+        path: /etc/NetworkManager/system-connections/ens18.nmconnection
+      register: nm_file
+
+    - name: Backup existing NetworkManager connection
+      copy:
+        src: /etc/NetworkManager/system-connections/ens18.nmconnection
+        dest: /etc/NetworkManager/system-connections/ens18.nmconnection.backup
+        remote_src: yes
+      when: nm_file.stat.exists
+
+    - name: Update [ipv4] section in NetworkManager connection
+      blockinfile:
+        path: /etc/NetworkManager/system-connections/ens18.nmconnection
+        marker: "# {mark} ANSIBLE MANAGED - IPv4 Configuration"
+        block: |
+          [ipv4]
+          address1={{ network.ip_address }}/{{ network.netmask }}
+          dns={{ network.dns_servers | join(';') }};
+          gateway={{ network.gateway }}
+          method=manual
+        insertafter: '^\[ethernet\]'
+        owner: root
+        group: root
+        mode: '0600'
+        create: yes
+
+    - name: Remove old [ipv4] section if it exists
+      lineinfile:
+        path: /etc/NetworkManager/system-connections/ens18.nmconnection
+        regexp: '^\[ipv4\]$'
+        state: absent
+      when: nm_file.stat.exists
+
+    - name: Reload NetworkManager
+      systemd:
+        name: NetworkManager
+        state: reloaded
+
+    - name: Bring up connection
+      command: nmcli connection up ens18
+      register: nmcli_result
+      changed_when: "'successfully activated' in nmcli_result.stdout"
+      failed_when: false

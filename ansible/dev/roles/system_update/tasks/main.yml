@@ -1,0 +1,31 @@
+---
+################################################################################
+# Role: system_update
+# Purpose: Update system packages for Ubuntu or Rocky Linux
+################################################################################
+
+- name: Update and upgrade system (Ubuntu)
+  when: os_type == "ubuntu"
+  block:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+
+- name: Update and upgrade system (Rocky)
+  when: os_type == "rocky"
+  block:
+    - name: Update dnf cache
+      dnf:
+        update_cache: yes
+
+    - name: Upgrade all packages
+      dnf:
+        name: "*"
+        state: latest
