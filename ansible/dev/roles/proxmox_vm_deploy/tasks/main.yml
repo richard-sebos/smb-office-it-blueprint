@@ -5,7 +5,7 @@
 ################################################################################
 
 - name: Check if VM already exists
-  shell: qm list | grep -w "{{ hostvars[inventory_hostname].vmid }}" || true
+  shell: qm list | grep -w "{{ vmid }}" || true
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -14,9 +14,9 @@
 
 - name: Clone VM from template
   shell: |
-    qm clone {{ hostvars[inventory_hostname].template_id }} {{ hostvars[inventory_hostname].vmid }} \
-      --name {{ hostvars[inventory_hostname].hostname }} \
-      --storage {{ hostvars[inventory_hostname].proxmox.storage }} \
+    qm clone {{ template_id }} {{ vmid }} \
+      --name {{ hostname }} \
+      --storage {{ proxmox.storage }} \
       --full
   delegate_to: "{{ proxmox_host }}"
   vars:
@@ -25,16 +25,16 @@
 
 - name: Configure VM resources
   shell: |
-    qm set {{ hostvars[inventory_hostname].vmid }} \
-      --cores {{ hostvars[inventory_hostname].resources.cores }} \
-      --memory {{ hostvars[inventory_hostname].resources.memory }}
+    qm set {{ vmid }} \
+      --cores {{ resources.cores }} \
+      --memory {{ resources.memory }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
 
 - name: Resize VM disk
   shell: |
-    qm resize {{ hostvars[inventory_hostname].vmid }} scsi0 {{ hostvars[inventory_hostname].resources.disk_size }}
+    qm resize {{ vmid }} scsi0 {{ resources.disk_size }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -42,31 +42,31 @@
 
 - name: Configure VM network
   shell: |
-    qm set {{ hostvars[inventory_hostname].vmid }} \
-      --net0 virtio,bridge=vmbr1,tag={{ hostvars[inventory_hostname].network.vlan }},firewall=0
+    qm set {{ vmid }} \
+      --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
 
 - name: Configure cloud-init network settings
   shell: |
-    qm set {{ hostvars[inventory_hostname].vmid }} \
-      --ipconfig0 ip={{ hostvars[inventory_hostname].network.ip_address }}/{{ hostvars[inventory_hostname].network.netmask }},gw={{ hostvars[inventory_hostname].network.gateway }} \
-      --nameserver {{ hostvars[inventory_hostname].network.dns_servers | join(',') }} \
-      --searchdomain {{ hostvars[inventory_hostname].network.search_domain }}
+    qm set {{ vmid }} \
+      --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
+      --nameserver {{ network.dns_servers | join(',') }} \
+      --searchdomain {{ network.search_domain }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
 
 - name: Set VM description
   shell: |
-    qm set {{ hostvars[inventory_hostname].vmid }} --description "{{ hostvars[inventory_hostname].fqdn }}
+    qm set {{ vmid }} --description "{{ fqdn }}
 
-    VM ID: {{ hostvars[inventory_hostname].vmid }}
-    IP: {{ hostvars[inventory_hostname].network.ip_address }}/{{ hostvars[inventory_hostname].network.netmask }}
-    Gateway: {{ hostvars[inventory_hostname].network.gateway }}
-    VLAN: {{ hostvars[inventory_hostname].network.vlan }}
-    OS: {{ hostvars[inventory_hostname].os_type | capitalize }} {{ hostvars[inventory_hostname].os_version }}
+    VM ID: {{ vmid }}
+    IP: {{ network.ip_address }}/{{ network.netmask }}
+    Gateway: {{ network.gateway }}
+    VLAN: {{ network.vlan }}
+    OS: {{ os_type | capitalize }} {{ os_version }}
 
     Managed by Ansible"
   delegate_to: "{{ proxmox_host }}"
@@ -75,15 +75,15 @@
 
 - name: Apply Proxmox tags
   shell: |
-    qm set {{ hostvars[inventory_hostname].vmid }} --tags "{{ hostvars[inventory_hostname].proxmox.tags | join(';') }}"
+    qm set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
 
 - name: Ensure resource pool exists
   shell: |
-    pvesh get /pools/{{ hostvars[inventory_hostname].proxmox.pool }} 2>/dev/null || \
-    pvesh create /pools --poolid {{ hostvars[inventory_hostname].proxmox.pool }} --comment "Auto-created by Ansible"
+    pvesh get /pools/{{ proxmox.pool }} 2>/dev/null || \
+    pvesh create /pools --poolid {{ proxmox.pool }} --comment "Auto-created by Ansible"
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -93,7 +93,7 @@
 
 - name: Add VM to resource pool
   shell: |
-    pvesh set /pools/{{ hostvars[inventory_hostname].proxmox.pool }} --vms {{ hostvars[inventory_hostname].vmid }}
+    pvesh set /pools/{{ proxmox.pool }} --vms {{ vmid }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -104,7 +104,7 @@
 
 - name: Start VM
   shell: |
-    qm start {{ hostvars[inventory_hostname].vmid }}
+    qm start {{ vmid }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -116,11 +116,11 @@
 - name: Wait for VM to boot
   pause:
     seconds: 30
-    prompt: "Waiting for VM {{ hostvars[inventory_hostname].hostname }} to boot..."
+    prompt: "Waiting for VM {{ hostname }} to boot..."
 
 - name: Wait for SSH to become available
   wait_for:
-    host: "{{ hostvars[inventory_hostname].network.ip_address }}"
+    host: "{{ network.ip_address }}"
     port: 22
     delay: 10
     timeout: 300
@@ -133,8 +133,8 @@
       - "========================================="
       - "VM Deployed Successfully!"
       - "========================================="
-      - "Hostname: {{ hostvars[inventory_hostname].hostname }}"
-      - "VMID: {{ hostvars[inventory_hostname].vmid }}"
-      - "IP: {{ hostvars[inventory_hostname].network.ip_address }}"
-      - "FQDN: {{ hostvars[inventory_hostname].fqdn }}"
+      - "Hostname: {{ hostname }}"
+      - "VMID: {{ vmid }}"
+      - "IP: {{ network.ip_address }}"
+      - "FQDN: {{ fqdn }}"
       - "========================================="

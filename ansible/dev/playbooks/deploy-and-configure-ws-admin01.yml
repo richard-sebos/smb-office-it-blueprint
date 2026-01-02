@@ -4,21 +4,23 @@
 # Purpose: Complete VM deployment and configuration
 ################################################################################
 
-- name: Deploy and Configure ws-admin01
-  hosts: ws-admin01
+- name: Deploy VM on Proxmox
+  hosts: localhost
   gather_facts: no
+  connection: local
 
   vars:
     proxmox_host: "{{ lookup('env', 'PROXMOX_HOST') | default('192.168.35.20', true) }}"
-
-  roles:
-    # Deploy VM on Proxmox
-    - role: proxmox_vm_deploy
-      delegate_to: localhost
+    target_host: ws-admin01
 
   tasks:
-    - name: Gather facts after deployment
-      setup:
+    - name: Load host variables for target VM
+      include_vars:
+        file: ../host_vars/{{ target_host }}.yml
+
+    - name: Include proxmox_vm_deploy role
+      include_role:
+        name: proxmox_vm_deploy
 
 - name: Configure ws-admin01
   hosts: ws-admin01
