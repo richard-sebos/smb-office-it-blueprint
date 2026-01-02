@@ -4,46 +4,14 @@
 # Purpose: Deploy VM on Proxmox using qm commands
 ################################################################################
 
-- name: Find qm command location
-  shell: |
-    if command -v qm >/dev/null 2>&1; then
-      command -v qm
-    elif [ -x /usr/sbin/qm ]; then
-      echo /usr/sbin/qm
-    elif [ -x /usr/bin/qm ]; then
-      echo /usr/bin/qm
-    else
-      find /usr -name qm -type f -executable 2>/dev/null | head -1
-    fi
-  delegate_to: pve
-  register: qm_path_result
-  changed_when: false
-
-- name: Display found qm path for debugging
-  debug:
-    msg: "Found qm at: {{ qm_path_result.stdout }}"
-
-- name: Fail if qm command not found
-  fail:
-    msg: "qm command not found on Proxmox host {{ proxmox_host }}"
-  when: qm_path_result.stdout | trim == ""
-
-- name: Set qm and pvesh command paths
+- name: Set Proxmox command paths
   set_fact:
-    qm_cmd: "{{ qm_path_result.stdout | trim }}"
-    pvesh_cmd: "{{ (qm_path_result.stdout | trim | dirname) }}/pvesh"
-
-- name: Display command paths
-  debug:
-    msg:
-      - "qm command: {{ qm_cmd }}"
-      - "pvesh command: {{ pvesh_cmd }}"
+    qm_cmd: /usr/sbin/qm
+    pvesh_cmd: /usr/sbin/pvesh
 
 - name: Check if VM already exists
   shell: "{{ qm_cmd }} list | grep -w '{{ vmid }}' || true"
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   register: vm_exists
   changed_when: false
 
@@ -53,9 +21,7 @@
       --name {{ hostname }} \
       --storage {{ proxmox.storage }} \
       --full
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   when: vm_exists.stdout == ""
 
 - name: Configure VM resources
@@ -63,25 +29,19 @@
     {{ qm_cmd }} set {{ vmid }} \
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
 
 - name: Resize VM disk
   shell: |
     {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   when: vm_exists.stdout == ""
 
 - name: Configure VM network
   shell: |
     {{ qm_cmd }} set {{ vmid }} \
       --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
 
 - name: Configure cloud-init network settings
   shell: |
@@ -89,9 +49,7 @@
       --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
       --nameserver {{ network.dns_servers | join(',') }} \
       --searchdomain {{ network.search_domain }}
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
 
 - name: Set VM description
   shell: |
@@ -104,24 +62,18 @@
     OS: {{ os_type | capitalize }} {{ os_version }}
 
     Managed by Ansible"
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
 
 - name: Apply Proxmox tags
   shell: |
     {{ qm_cmd }} set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
 
 - name: Ensure resource pool exists
   shell: |
     {{ pvesh_cmd }} get /pools/{{ proxmox.pool }} 2>/dev/null || \
     {{ pvesh_cmd }} create /pools --poolid {{ proxmox.pool }} --comment "Auto-created by Ansible"
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   register: pool_check
   changed_when: "'created' in pool_check.stdout"
   failed_when: false
@@ -129,9 +81,7 @@
 - name: Add VM to resource pool
   shell: |
     {{ pvesh_cmd }} set /pools/{{ proxmox.pool }} --vms {{ vmid }}
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   register: pool_result
   failed_when:
     - pool_result.rc != 0
@@ -140,9 +90,7 @@
 - name: Start VM
   shell: |
     {{ qm_cmd }} start {{ vmid }}
-  delegate_to: "{{ proxmox_host }}"
-  vars:
-    ansible_user: root
+  delegate_to: pve
   register: vm_start
   failed_when:
     - vm_start.rc != 0
