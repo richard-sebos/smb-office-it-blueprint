@@ -5,7 +5,7 @@
 ################################################################################
 
 - name: Check if VM already exists
-  shell: qm list | grep -w "{{ vmid }}" || true
+  shell: /usr/sbin/qm list | grep -w "{{ vmid }}" || true
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -14,7 +14,7 @@
 
 - name: Clone VM from template
   shell: |
-    qm clone {{ template_id }} {{ vmid }} \
+    /usr/sbin/qm clone {{ template_id }} {{ vmid }} \
       --name {{ hostname }} \
       --storage {{ proxmox.storage }} \
       --full
@@ -25,7 +25,7 @@
 
 - name: Configure VM resources
   shell: |
-    qm set {{ vmid }} \
+    /usr/sbin/qm set {{ vmid }} \
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
   delegate_to: "{{ proxmox_host }}"
@@ -34,7 +34,7 @@
 
 - name: Resize VM disk
   shell: |
-    qm resize {{ vmid }} scsi0 {{ resources.disk_size }}
+    /usr/sbin/qm resize {{ vmid }} scsi0 {{ resources.disk_size }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -42,7 +42,7 @@
 
 - name: Configure VM network
   shell: |
-    qm set {{ vmid }} \
+    /usr/sbin/qm set {{ vmid }} \
       --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
   delegate_to: "{{ proxmox_host }}"
   vars:
@@ -50,7 +50,7 @@
 
 - name: Configure cloud-init network settings
   shell: |
-    qm set {{ vmid }} \
+    /usr/sbin/qm set {{ vmid }} \
       --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
       --nameserver {{ network.dns_servers | join(',') }} \
       --searchdomain {{ network.search_domain }}
@@ -60,7 +60,7 @@
 
 - name: Set VM description
   shell: |
-    qm set {{ vmid }} --description "{{ fqdn }}
+    /usr/sbin/qm set {{ vmid }} --description "{{ fqdn }}
 
     VM ID: {{ vmid }}
     IP: {{ network.ip_address }}/{{ network.netmask }}
@@ -75,15 +75,15 @@
 
 - name: Apply Proxmox tags
   shell: |
-    qm set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
+    /usr/sbin/qm set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
 
 - name: Ensure resource pool exists
   shell: |
-    pvesh get /pools/{{ proxmox.pool }} 2>/dev/null || \
-    pvesh create /pools --poolid {{ proxmox.pool }} --comment "Auto-created by Ansible"
+    /usr/sbin/pvesh get /pools/{{ proxmox.pool }} 2>/dev/null || \
+    /usr/sbin/pvesh create /pools --poolid {{ proxmox.pool }} --comment "Auto-created by Ansible"
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -93,7 +93,7 @@
 
 - name: Add VM to resource pool
   shell: |
-    pvesh set /pools/{{ proxmox.pool }} --vms {{ vmid }}
+    /usr/sbin/pvesh set /pools/{{ proxmox.pool }} --vms {{ vmid }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
@@ -104,7 +104,7 @@
 
 - name: Start VM
   shell: |
-    qm start {{ vmid }}
+    /usr/sbin/qm start {{ vmid }}
   delegate_to: "{{ proxmox_host }}"
   vars:
     ansible_user: root
