@@ -20,19 +20,20 @@
     - name: Gather facts after deployment
       setup:
 
-    - name: Import configuration roles
-      include_role:
-        name: "{{ item }}"
-      loop:
-        - network_config
-        - hostname_config
-        - system_update
-        - install_packages
-        - user_config
-        - ssh_config
-        - ssh_hardening
-        - service_config
-      become: yes
+- name: Configure ws-admin01
+  hosts: ws-admin01
+  become: yes
+  gather_facts: no
+
+  roles:
+    - network_config
+    - hostname_config
+    - system_update
+    - install_packages
+    - user_config
+    - ssh_config
+    - ssh_hardening
+    - service_config
 
   post_tasks:
     - name: Display configuration summary
