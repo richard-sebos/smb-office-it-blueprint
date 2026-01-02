@@ -25,10 +25,21 @@
   debug:
     msg: "Found qm at: {{ qm_path_result.stdout }}"
 
+- name: Fail if qm command not found
+  fail:
+    msg: "qm command not found on Proxmox host {{ proxmox_host }}"
+  when: qm_path_result.stdout | trim == ""
+
 - name: Set qm and pvesh command paths
   set_fact:
     qm_cmd: "{{ qm_path_result.stdout | trim }}"
     pvesh_cmd: "{{ (qm_path_result.stdout | trim | dirname) }}/pvesh"
+
+- name: Display command paths
+  debug:
+    msg:
+      - "qm command: {{ qm_cmd }}"
+      - "pvesh command: {{ pvesh_cmd }}"
 
 - name: Check if VM already exists
   shell: "{{ qm_cmd }} list | grep -w '{{ vmid }}' || true"
