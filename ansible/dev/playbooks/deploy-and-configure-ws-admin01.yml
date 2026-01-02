@@ -1,0 +1,11 @@
+---
+################################################################################
+# Playbook: Deploy and Configure ws-admin01
+# Purpose: Complete VM deployment and configuration in one playbook
+################################################################################
+
+- name: Deploy VM on Proxmox
+  import_playbook: deploy-ws-admin01.yml
+
+- name: Configure VM
+  import_playbook: configure-ws-admin01-roles.yml

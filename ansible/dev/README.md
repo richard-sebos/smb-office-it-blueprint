@@ -24,17 +24,44 @@ ansible/dev/
 
 ## Usage
 
-### Configure ws-admin01
+### Initial Setup
 
-From the `ansible/dev` directory:
+1. **Set up Proxmox credentials:**
+   ```bash
+   cd ansible/dev
+   cp .env.example .env
+   # Edit .env with your Proxmox password
+   vim .env
+   source .env
+   ```
 
+2. **Install required Ansible collections:**
+   ```bash
+   ansible-galaxy collection install community.general
+   ```
+
+### Deploy and Configure ws-admin01
+
+**Option 1: Deploy and configure in one command (recommended)**
 ```bash
 cd ansible/dev
+source .env
+ansible-playbook playbooks/deploy-and-configure-ws-admin01.yml
+```
 
-# Test connectivity
+**Option 2: Deploy then configure separately**
+```bash
+# Deploy VM on Proxmox
+ansible-playbook playbooks/deploy-ws-admin01.yml
+
+# Configure the VM
+ansible-playbook playbooks/configure-ws-admin01-roles.yml
+```
+
+**Option 3: Configure existing VM**
+```bash
+# If VM already exists and is accessible
 ansible ws-admin01 -m ping
-
-# Run configuration playbook
 ansible-playbook playbooks/configure-ws-admin01-roles.yml
 
 # Run with verbose output

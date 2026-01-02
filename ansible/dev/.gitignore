@@ -1,0 +1,12 @@
+# Environment files with credentials
+.env
+
+# Ansible cache
+.cache/
+*.retry
+/tmp/ansible_facts/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
