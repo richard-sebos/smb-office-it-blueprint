@@ -22,7 +22,11 @@ network:
     - 10.0.120.10  # dc01
     - 10.0.120.11  # dc02
   search_domain: corp.company.local
-  template_ip: 10.0.130.14  # Temporary IP from template for initial connection
+
+  # Temporary management interface for initial configuration
+  mgmt_interface: ens19
+  mgmt_ip: 192.168.35.124  # On same subnet as Ansible server
+  mgmt_remove_after_config: true  # Remove this interface after configuration is complete
 
 # OS Configuration
 os_type: rocky  # ubuntu or rocky

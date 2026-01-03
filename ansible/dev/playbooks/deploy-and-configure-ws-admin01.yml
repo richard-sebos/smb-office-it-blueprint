@@ -30,10 +30,10 @@
       include_vars:
         file: ../host_vars/ws-admin01.yml
 
-    - name: Override ansible_host with template IP for initial connection
+    - name: Use management IP for initial connection
       set_fact:
-        ansible_host: "{{ network.template_ip }}"
-      when: network.template_ip is defined
+        ansible_host: "{{ network.mgmt_ip }}"
+      when: network.mgmt_ip is defined
 
   roles:
     - network_config
@@ -46,6 +46,24 @@
     - service_config
 
   post_tasks:
+    - name: Remove temporary management interface connection
+      block:
+        - name: Delete management interface connection file
+          file:
+            path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
+            state: absent
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
+        - name: Reload NetworkManager
+          systemd:
+            name: NetworkManager
+            state: reloaded
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
     - name: Display configuration summary
       debug:
         msg:
@@ -57,6 +75,8 @@
           - "VLAN: {{ network.vlan }}"
           - "Gateway: {{ network.gateway }}"
           - "DNS: {{ network.dns_servers }}"
+          - "========================================="
+          - "Management interface {{ network.mgmt_interface }} removed"
           - "========================================="
           - "Next steps:"
           - "  ssh {{ admin_user.username }}@{{ network.ip_address }}"
