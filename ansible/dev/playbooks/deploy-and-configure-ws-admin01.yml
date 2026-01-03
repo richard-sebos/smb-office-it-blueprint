@@ -30,10 +30,13 @@
       include_vars:
         file: ../host_vars/ws-admin01.yml
 
-    - name: Use management IP for initial connection
+    - name: Use management connection for initial configuration
       set_fact:
         ansible_host: "{{ network.mgmt_ip }}"
-      when: network.mgmt_ip is defined
+        ansible_user: "{{ network.mgmt_user }}"
+      when:
+        - network.mgmt_ip is defined
+        - network.mgmt_user is defined
 
   roles:
     - network_config
