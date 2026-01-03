@@ -5,12 +5,10 @@
 ################################################################################
 
 - name: Deploy VM on Proxmox
-  hosts: localhost
+  hosts: pve
   gather_facts: no
-  connection: local
 
   vars:
-    proxmox_host: "{{ lookup('env', 'PROXMOX_HOST') | default('192.168.35.20', true) }}"
     target_host: ws-admin01
 
   tasks:

@@ -6,7 +6,6 @@
 
 - name: Debug - Check PATH on Proxmox host
   shell: echo $PATH
-  delegate_to: pve
   register: path_debug
   changed_when: false
 
@@ -16,10 +15,8 @@
 
 - name: Debug - Find qm executable
   shell: "which qm || find /usr -name qm 2>/dev/null || echo 'qm not found'"
-  delegate_to: pve
   register: qm_location
   changed_when: false
-  environment: "{{ proxmox_environment }}"
 
 - name: Debug - Display qm location
   debug:
@@ -27,7 +24,6 @@
 
 - name: Debug - Check qm file details
   shell: "ls -la /usr/sbin/qm; file /usr/sbin/qm"
-  delegate_to: pve
   register: qm_file_check
   changed_when: false
   failed_when: false
@@ -38,38 +34,23 @@
 
 - name: Debug - Test qm execution directly
   shell: "qm list"
-  delegate_to: pve
   register: qm_direct_test
   changed_when: false
   failed_when: false
-  environment: "{{ proxmox_environment }}"
 
 - name: Debug - Display qm direct test
   debug:
     msg: "qm direct test: {{ qm_direct_test }}"
 
-- name: Debug - Test with bash -lc
-  shell: "bash -lc 'qm list'"
-  delegate_to: pve
-  register: qm_bash_test
-  changed_when: false
-  failed_when: false
-
-- name: Debug - Display bash test
-  debug:
-    msg: "bash test: {{ qm_bash_test.stdout_lines }}"
-
 - name: Set Proxmox command paths
   set_fact:
-    qm_cmd: /usr/sbin/qm
-    pvesh_cmd: /usr/sbin/pvesh
+    qm_cmd: qm
+    pvesh_cmd: pvesh
 
 - name: Check if VM already exists
   shell: "{{ qm_cmd }} list | grep -w '{{ vmid }}' || true"
-  delegate_to: pve
   register: vm_exists
   changed_when: false
-  environment: "{{ proxmox_environment }}"
 
 - name: Clone VM from template
   shell: |
@@ -77,31 +58,23 @@
       --name {{ hostname }} \
       --storage {{ proxmox.storage }} \
       --full
-  delegate_to: pve
   when: vm_exists.stdout == ""
-  environment: "{{ proxmox_environment }}"
 
 - name: Configure VM resources
   shell: |
     {{ qm_cmd }} set {{ vmid }} \
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
-  delegate_to: pve
-  environment: "{{ proxmox_environment }}"
 
 - name: Resize VM disk
   shell: |
     {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
-  delegate_to: pve
   when: vm_exists.stdout == ""
-  environment: "{{ proxmox_environment }}"
 
 - name: Configure VM network
   shell: |
     {{ qm_cmd }} set {{ vmid }} \
       --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
-  delegate_to: pve
-  environment: "{{ proxmox_environment }}"
 
 - name: Configure cloud-init network settings
   shell: |
@@ -109,8 +82,6 @@
       --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
       --nameserver {{ network.dns_servers | join(',') }} \
       --searchdomain {{ network.search_domain }}
-  delegate_to: pve
-  environment: "{{ proxmox_environment }}"
 
 - name: Set VM description
   shell: |
@@ -123,44 +94,34 @@
     OS: {{ os_type | capitalize }} {{ os_version }}
 
     Managed by Ansible"
-  delegate_to: pve
-  environment: "{{ proxmox_environment }}"
 
 - name: Apply Proxmox tags
   shell: |
     {{ qm_cmd }} set {{ vmid }} --tags "{{ proxmox.tags | join(';') }}"
-  delegate_to: pve
-  environment: "{{ proxmox_environment }}"
 
 - name: Ensure resource pool exists
   shell: |
     {{ pvesh_cmd }} get /pools/{{ proxmox.pool }} 2>/dev/null || \
     {{ pvesh_cmd }} create /pools --poolid {{ proxmox.pool }} --comment "Auto-created by Ansible"
-  delegate_to: pve
   register: pool_check
   changed_when: "'created' in pool_check.stdout"
   failed_when: false
-  environment: "{{ proxmox_environment }}"
 
 - name: Add VM to resource pool
   shell: |
     {{ pvesh_cmd }} set /pools/{{ proxmox.pool }} --vms {{ vmid }}
-  delegate_to: pve
   register: pool_result
   failed_when:
     - pool_result.rc != 0
     - "'already exists' not in pool_result.stderr"
-  environment: "{{ proxmox_environment }}"
 
 - name: Start VM
   shell: |
     {{ qm_cmd }} start {{ vmid }}
-  delegate_to: pve
   register: vm_start
   failed_when:
     - vm_start.rc != 0
     - "'already running' not in vm_start.stderr"
-  environment: "{{ proxmox_environment }}"
 
 - name: Wait for VM to boot
   pause:
