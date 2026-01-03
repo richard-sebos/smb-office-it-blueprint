@@ -48,9 +48,14 @@
     pvesh_cmd: pvesh
 
 - name: Check if VM already exists
-  shell: "{{ qm_cmd }} list | grep -w '{{ vmid }}' || true"
+  shell: "{{ qm_cmd }} list | awk '$1 == {{ vmid }} {print}'"
   register: vm_exists
   changed_when: false
+  failed_when: false
+
+- name: Debug - Display VM exists check
+  debug:
+    msg: "VM exists check result: '{{ vm_exists.stdout }}'"
 
 - name: Clone VM from template
   shell: |
