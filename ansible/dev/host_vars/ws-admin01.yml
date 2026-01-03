@@ -91,7 +91,7 @@ admin_user:
     - wheel  # Rocky Linux sudo group
     - adm
   shell: /bin/bash
-  ssh_public_key_path: ~/.ssh/id_rsa.pub  # Path to public key on control machine
+  ssh_public_key_path: ~/.ssh/id_ed25519.pub  # Path to public key on control machine
 
 # Services
 services:
