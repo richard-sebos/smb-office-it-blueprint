@@ -84,8 +84,6 @@ install_base_packages() {
         unzip \
         jq \
         tree \
-        htop \
-        tmux \
         python3 \
         python3-pip \
         python3-devel \
@@ -157,7 +155,7 @@ install_ansible() {
         yamllint
 
     # Verify installation
-    ansible --version
+    /usr/local/bin/ansible --version
 
     log_success "Ansible installed: $(ansible --version | head -1)"
 }
@@ -180,7 +178,7 @@ collections:
 EOF
 
     # Install collections as ansible-admin user
-    sudo -u "${ANSIBLE_USER}" ansible-galaxy collection install -r /tmp/ansible-collections.yml
+    sudo -u "${ANSIBLE_USER}" /usr/local/bin/ansible-galaxy collection install -r /tmp/ansible-collections.yml
 
     rm /tmp/ansible-collections.yml
 
