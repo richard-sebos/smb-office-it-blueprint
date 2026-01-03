@@ -3,9 +3,6 @@
 # Role: network_config
 # Purpose: Configure static network settings for Ubuntu or Rocky Linux
 ################################################################################
-- name: Load host variables for target VM
-  include_vars:
-  file: ../host_vars/{{ target_host }}.yml
 - name: Configure static IP with netplan (Ubuntu)
   when: os_type == "ubuntu"
   block:
