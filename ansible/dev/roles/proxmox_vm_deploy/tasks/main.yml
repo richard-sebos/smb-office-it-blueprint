@@ -4,43 +4,43 @@
 # Purpose: Deploy VM on Proxmox using qm commands
 ################################################################################
 
-- name: Debug - Check PATH on Proxmox host
-  shell: echo $PATH
-  register: path_debug
-  changed_when: false
+#- name: Debug - Check PATH on Proxmox host
+#  shell: echo $PATH
+#  register: path_debug
+#  changed_when: false
 
-- name: Debug - Display PATH
-  debug:
-    msg: "PATH on Proxmox: {{ path_debug.stdout }}"
+#- name: Debug - Display PATH
+#  debug:
+#    msg: "PATH on Proxmox: {{ path_debug.stdout }}"
 
-- name: Debug - Find qm executable
-  shell: "which qm || find /usr -name qm 2>/dev/null || echo 'qm not found'"
-  register: qm_location
-  changed_when: false
+#- name: Debug - Find qm executable
+#  shell: "which qm || find /usr -name qm 2>/dev/null || echo 'qm not found'"
+#  register: qm_location
+#  changed_when: false
 
-- name: Debug - Display qm location
-  debug:
-    msg: "qm location: {{ qm_location.stdout }}"
+#- name: Debug - Display qm location
+#  debug:
+#    msg: "qm location: {{ qm_location.stdout }}"
 
-- name: Debug - Check qm file details
-  shell: "ls -la /usr/sbin/qm; file /usr/sbin/qm"
-  register: qm_file_check
-  changed_when: false
-  failed_when: false
+#- name: Debug - Check qm file details
+#  shell: "ls -la /usr/sbin/qm; file /usr/sbin/qm"
+#  register: qm_file_check
+#  changed_when: false
+#  failed_when: false
 
-- name: Debug - Display qm file details
-  debug:
-    msg: "qm file details: {{ qm_file_check.stdout_lines }}"
+#- name: Debug - Display qm file details
+#  debug:
+#    msg: "qm file details: {{ qm_file_check.stdout_lines }}"
 
-- name: Debug - Test qm execution directly
-  shell: "qm list"
-  register: qm_direct_test
-  changed_when: false
-  failed_when: false
+#- name: Debug - Test qm execution directly
+#  shell: "qm list"
+#  register: qm_direct_test
+#  changed_when: false
+#  failed_when: false
 
-- name: Debug - Display qm direct test
-  debug:
-    msg: "qm direct test: {{ qm_direct_test }}"
+#- name: Debug - Display qm direct test
+#  debug:
+#    msg: "qm direct test: {{ qm_direct_test }}"
 
 - name: Set Proxmox command paths
   set_fact:
@@ -53,9 +53,9 @@
   changed_when: false
   failed_when: false
 
-- name: Debug - Display VM exists check
-  debug:
-    msg: "VM exists check result: '{{ vm_exists.stdout }}'"
+#- name: Debug - Display VM exists check
+#  debug:
+#    msg: "VM exists check result: '{{ vm_exists.stdout }}'"
 
 - name: Clone VM from template
   shell: |
@@ -71,22 +71,22 @@
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
 
-- name: Resize VM disk
-  shell: |
-    {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
-  when: vm_exists.stdout == ""
+#- name: Resize VM disk
+#  shell: |
+#    {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
+#  when: vm_exists.stdout == ""
 
-- name: Configure VM network
-  shell: |
-    {{ qm_cmd }} set {{ vmid }} \
-      --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
+#- name: Configure VM network
+#  shell: |
+#    {{ qm_cmd }} set {{ vmid }} \
+#      --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
 
-- name: Configure cloud-init network settings
-  shell: |
-    {{ qm_cmd }} set {{ vmid }} \
-      --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
-      --nameserver {{ network.dns_servers | join(',') }} \
-      --searchdomain {{ network.search_domain }}
+#- name: Configure cloud-init network settings
+#  shell: |
+#    {{ qm_cmd }} set {{ vmid }} \
+#      --ipconfig0 ip={{ network.ip_address }}/{{ network.netmask }},gw={{ network.gateway }} \
+#      --nameserver {{ network.dns_servers | join(',') }} \
+#      --searchdomain {{ network.search_domain }}
 
 - name: Set VM description
   shell: |
@@ -133,14 +133,14 @@
     seconds: 30
     prompt: "Waiting for VM {{ hostname }} to boot..."
 
-- name: Wait for SSH to become available
-  wait_for:
-    host: "{{ network.ip_address }}"
-    port: 22
-    delay: 10
-    timeout: 300
-    state: started
-  delegate_to: localhost
+#- name: Wait for SSH to become available
+#  wait_for:
+#    host: "{{ network.ip_address }}"
+#    port: 22
+#    delay: 10
+#    timeout: 300
+#    state: started
+#  delegate_to: localhost
 
 - name: Display deployment summary
   debug:
