@@ -13,11 +13,12 @@ fqdn: ws-admin01.corp.company.local
 # Network Configuration
 network:
   interface: ens18
-  ip_address: 10.0.131.10
+  ip_address: 10.0.130.10
   netmask: 24
-  gateway: 10.0.131.1
+  gateway: 10.0.130.1
   vlan: 131
   dns_servers:
+    - 8.8.8.8
     - 10.0.120.10  # dc01
     - 10.0.120.11  # dc02
   search_domain: corp.company.local
@@ -42,7 +43,7 @@ proxmox:
     - workstation
     - admin
     - privileged-access
-    - ubuntu
+    - rocky
     - vlan-130
     - monitored
 
