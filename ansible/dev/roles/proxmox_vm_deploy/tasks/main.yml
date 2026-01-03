@@ -25,17 +25,39 @@
   debug:
     msg: "qm location: {{ qm_location.stdout }}"
 
-- name: Debug - Test qm with full path
-  shell: "/usr/sbin/qm list || echo 'qm failed'"
+- name: Debug - Check qm file details
+  shell: "ls -la /usr/sbin/qm; file /usr/sbin/qm"
   delegate_to: pve
-  register: qm_test
+  register: qm_file_check
+  changed_when: false
+  failed_when: false
+
+- name: Debug - Display qm file details
+  debug:
+    msg: "qm file details: {{ qm_file_check.stdout_lines }}"
+
+- name: Debug - Test qm execution directly
+  shell: "qm list"
+  delegate_to: pve
+  register: qm_direct_test
   changed_when: false
   failed_when: false
   environment: "{{ proxmox_environment }}"
 
-- name: Debug - Display qm test result
+- name: Debug - Display qm direct test
   debug:
-    msg: "qm test output: {{ qm_test }}"
+    msg: "qm direct test: {{ qm_direct_test }}"
+
+- name: Debug - Test with bash -lc
+  shell: "bash -lc 'qm list'"
+  delegate_to: pve
+  register: qm_bash_test
+  changed_when: false
+  failed_when: false
+
+- name: Debug - Display bash test
+  debug:
+    msg: "bash test: {{ qm_bash_test.stdout_lines }}"
 
 - name: Set Proxmox command paths
   set_fact:
