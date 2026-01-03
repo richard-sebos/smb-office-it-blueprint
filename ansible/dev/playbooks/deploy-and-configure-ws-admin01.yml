@@ -30,6 +30,11 @@
       include_vars:
         file: ../host_vars/ws-admin01.yml
 
+    - name: Override ansible_host with template IP for initial connection
+      set_fact:
+        ansible_host: "{{ network.template_ip }}"
+      when: network.template_ip is defined
+
   roles:
     - network_config
     - hostname_config
