@@ -48,10 +48,8 @@ proxmox:
   tags:
     - workstation
     - admin
-    - privileged-access
     - rocky
     - vlan-131
-    - monitored
 
 # Software Packages
 packages:
