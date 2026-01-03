@@ -4,6 +4,39 @@
 # Purpose: Deploy VM on Proxmox using qm commands
 ################################################################################
 
+- name: Debug - Check PATH on Proxmox host
+  shell: echo $PATH
+  delegate_to: pve
+  register: path_debug
+  changed_when: false
+
+- name: Debug - Display PATH
+  debug:
+    msg: "PATH on Proxmox: {{ path_debug.stdout }}"
+
+- name: Debug - Find qm executable
+  shell: "which qm || find /usr -name qm 2>/dev/null || echo 'qm not found'"
+  delegate_to: pve
+  register: qm_location
+  changed_when: false
+  environment: "{{ proxmox_environment }}"
+
+- name: Debug - Display qm location
+  debug:
+    msg: "qm location: {{ qm_location.stdout }}"
+
+- name: Debug - Test qm with full path
+  shell: "/usr/sbin/qm list || echo 'qm failed'"
+  delegate_to: pve
+  register: qm_test
+  changed_when: false
+  failed_when: false
+  environment: "{{ proxmox_environment }}"
+
+- name: Debug - Display qm test result
+  debug:
+    msg: "qm test output: {{ qm_test }}"
+
 - name: Set Proxmox command paths
   set_fact:
     qm_cmd: /usr/sbin/qm
