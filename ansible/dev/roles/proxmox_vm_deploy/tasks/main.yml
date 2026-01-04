@@ -71,15 +71,15 @@
       --cores {{ resources.cores }} \
       --memory {{ resources.memory }}
 
-#- name: Resize VM disk
-#  shell: |
-#    {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
-#  when: vm_exists.stdout == ""
+- name: Resize VM disk
+  shell: |
+    {{ qm_cmd }} resize {{ vmid }} scsi0 {{ resources.disk_size }}
+  when: vm_exists.stdout == ""
 
-#- name: Configure VM network
-#  shell: |
-#    {{ qm_cmd }} set {{ vmid }} \
-#      --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
+- name: Configure VM network with VLAN
+  shell: |
+    {{ qm_cmd }} set {{ vmid }} \
+      --net0 virtio,bridge=vmbr1,tag={{ network.vlan }},firewall=0
 
 #- name: Configure cloud-init network settings
 #  shell: |
