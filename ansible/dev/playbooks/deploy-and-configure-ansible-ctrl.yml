@@ -1,0 +1,86 @@
+---
+################################################################################
+# Playbook: Deploy and Configure ansible-ctrl
+# Purpose: Complete VM deployment and configuration
+################################################################################
+
+- name: Deploy VM on Proxmox
+  hosts: pve
+  gather_facts: no
+
+  vars:
+    target_host: ansible-ctrl
+
+  tasks:
+    - name: Load host variables for target VM
+      include_vars:
+        file: ../host_vars/{{ target_host }}.yml
+
+    - name: Include proxmox_vm_deploy role
+      include_role:
+        name: proxmox_vm_deploy
+
+- name: Configure ansible-ctrl
+  hosts: ansible-ctrl
+  become: yes
+  gather_facts: no
+
+  pre_tasks:
+    - name: Load host variables
+      include_vars:
+        file: ../host_vars/ansible-ctrl.yml
+
+    - name: Use management connection for initial configuration
+      set_fact:
+        ansible_host: "{{ network.mgmt_ip }}"
+        ansible_user: "{{ network.mgmt_user }}"
+      when:
+        - network.mgmt_ip is defined
+        - network.mgmt_user is defined
+
+  roles:
+    - network_config
+    - hostname_config
+    - system_update
+    - install_packages
+    - user_config
+    - ssh_config
+    - ssh_hardening
+    - service_config
+
+  post_tasks:
+    - name: Remove temporary management interface connection
+      block:
+        - name: Delete management interface connection file
+          file:
+            path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
+            state: absent
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
+        - name: Reload NetworkManager
+          systemd:
+            name: NetworkManager
+            state: reloaded
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
+    - name: Display configuration summary
+      debug:
+        msg:
+          - "========================================="
+          - "VM Configuration Complete!"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "IP: {{ network.ip_address }}/{{ network.netmask }}"
+          - "VLAN: {{ network.vlan }}"
+          - "Gateway: {{ network.gateway }}"
+          - "DNS: {{ network.dns_servers }}"
+          - "========================================="
+          - "Management interface {{ network.mgmt_interface }} removed"
+          - "========================================="
+          - "Next steps:"
+          - "  ssh {{ admin_user.username }}@{{ network.ip_address }}"
+          - "========================================="
