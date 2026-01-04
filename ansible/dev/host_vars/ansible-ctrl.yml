@@ -32,7 +32,7 @@ network:
 # OS Configuration
 os_type: rocky  # ubuntu or rocky
 os_version: "9"
-template_id: 9275  # Rocky Linux 9 template
+template_id: 9200  # Rocky Linux 9 template
 
 # System Resources
 resources:
