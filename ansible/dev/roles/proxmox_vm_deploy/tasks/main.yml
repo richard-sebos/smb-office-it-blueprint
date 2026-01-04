@@ -118,7 +118,9 @@
   register: pool_result
   failed_when:
     - pool_result.rc != 0
-    - "'already exists' not in pool_result.stderr"
+    - "'already a pool member' not in pool_result.stderr"
+  changed_when:
+    - pool_result.rc == 0
 
 - name: Start VM
   shell: |
