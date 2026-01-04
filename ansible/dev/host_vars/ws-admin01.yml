@@ -13,14 +13,14 @@ fqdn: ws-admin01.corp.company.local
 # Network Configuration
 network:
   interface: ens18
-  ip_address: 10.0.132.10
+  ip_address: 10.0.130.10
   netmask: 24
-  gateway: 10.0.132.1
-  vlan: 132
+  gateway: 10.0.130.1
+  vlan: 130
   dns_servers:
     - 8.8.8.8
-    - 10.0.120.10  # dc01
-    - 10.0.120.11  # dc02
+    - 10.0.130.10  # dc01
+    - 10.0.130.11  # dc02
   search_domain: corp.company.local
 
   # Temporary management interface for initial configuration
