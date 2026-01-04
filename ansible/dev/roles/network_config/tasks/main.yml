@@ -24,38 +24,23 @@
   block:
     - name: Check if NetworkManager connection file exists
       stat:
-        path: /etc/NetworkManager/system-connections/ens18.nmconnection
+        path: /etc/NetworkManager/system-connections/{{ network.interface }}.nmconnection
       register: nm_file
 
     - name: Backup existing NetworkManager connection
       copy:
-        src: /etc/NetworkManager/system-connections/ens18.nmconnection
-        dest: /etc/NetworkManager/system-connections/ens18.nmconnection.backup
+        src: /etc/NetworkManager/system-connections/{{ network.interface }}.nmconnection
+        dest: /etc/NetworkManager/system-connections/{{ network.interface }}.nmconnection.backup
         remote_src: yes
       when: nm_file.stat.exists
 
-    - name: Update [ipv4] section in NetworkManager connection
-      blockinfile:
-        path: /etc/NetworkManager/system-connections/ens18.nmconnection
-        marker: "# {mark} ANSIBLE MANAGED - IPv4 Configuration"
-        block: |
-          [ipv4]
-          address1={{ network.ip_address }}/{{ network.netmask }}
-          dns={{ network.dns_servers | join(';') }};
-          gateway={{ network.gateway }}
-          method=manual
-        insertafter: '^\[ethernet\]'
+    - name: Create NetworkManager connection from template
+      template:
+        src: nmconnection-static.j2
+        dest: /etc/NetworkManager/system-connections/{{ network.interface }}.nmconnection
         owner: root
         group: root
         mode: '0600'
-        create: yes
-
-#    - name: Remove old [ipv4] section if it exists
-#      lineinfil#e:
-#        path: /etc/NetworkManager/system-connections/ens18.nmconnection
-#        regexp: '^\[ipv4\]$'
-#        state: absent
-#      when: nm_file.stat.exists
 
     - name: Reload NetworkManager
       systemd:
@@ -63,7 +48,7 @@
         state: reloaded
 
     - name: Bring up connection
-      command: nmcli connection up ens18
+      command: nmcli connection up {{ network.interface }}
       register: nmcli_result
       changed_when: "'successfully activated' in nmcli_result.stdout"
       failed_when: false

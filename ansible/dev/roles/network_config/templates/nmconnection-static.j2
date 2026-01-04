@@ -1,0 +1,20 @@
+[connection]
+id={{ network.interface }}
+uuid={{ 99999999 | random | to_uuid }}
+type=ethernet
+interface-name={{ network.interface }}
+autoconnect=true
+
+[ethernet]
+
+[ipv4]
+address1={{ network.ip_address }}/{{ network.netmask }},{{ network.gateway }}
+dns={{ network.dns_servers | join(';') }};
+dns-search={{ network.search_domain }}
+method=manual
+
+[ipv6]
+addr-gen-mode=eui64
+method=disabled
+
+[proxy]
