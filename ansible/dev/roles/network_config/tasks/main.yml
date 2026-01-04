@@ -50,12 +50,12 @@
         mode: '0600'
         create: yes
 
-    - name: Remove old [ipv4] section if it exists
-      lineinfile:
-        path: /etc/NetworkManager/system-connections/ens18.nmconnection
-        regexp: '^\[ipv4\]$'
-        state: absent
-      when: nm_file.stat.exists
+#    - name: Remove old [ipv4] section if it exists
+#      lineinfil#e:
+#        path: /etc/NetworkManager/system-connections/ens18.nmconnection
+#        regexp: '^\[ipv4\]$'
+#        state: absent
+#      when: nm_file.stat.exists
 
     - name: Reload NetworkManager
       systemd:
