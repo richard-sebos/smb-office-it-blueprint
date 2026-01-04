@@ -94,7 +94,7 @@ admin_user:
 # Services
 services:
   enabled:
-    - ssh
+    - sshd
   disabled:
     - bluetooth
 
