@@ -74,7 +74,6 @@ packages:
     - ansible
     - ansible-core
     - python3-pip
-    - python3-virtualenv
     - sshpass
 
   development:
