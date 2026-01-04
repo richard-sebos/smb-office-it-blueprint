@@ -16,7 +16,7 @@ network:
   ip_address: 10.0.132.10
   netmask: 24
   gateway: 10.0.132.1
-  vlan: 131
+  vlan: 132
   dns_servers:
     - 8.8.8.8
     - 10.0.120.10  # dc01
