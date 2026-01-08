@@ -46,7 +46,6 @@ proxmox:
   storage: vmDrive
   pool: production
   tags:
-    - server
     - domain-controller
     - secondary-dc
     - ubuntu
