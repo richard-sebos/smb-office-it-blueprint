@@ -1,0 +1,110 @@
+---
+################################################################################
+# Playbook: Deploy Domain Controllers
+# Purpose: Deploy VMs and configure base networking for dc01 and dc02
+################################################################################
+
+- name: Deploy Domain Controller VMs on Proxmox
+  hosts: pve
+  gather_facts: no
+
+  tasks:
+    - name: Deploy dc01
+      block:
+        - name: Load host variables for dc01
+          include_vars:
+            file: ../host_vars/dc01.yml
+
+        - name: Deploy dc01 VM
+          include_role:
+            name: proxmox_vm_deploy
+
+    - name: Deploy dc02
+      block:
+        - name: Load host variables for dc02
+          include_vars:
+            file: ../host_vars/dc02.yml
+
+        - name: Deploy dc02 VM
+          include_role:
+            name: proxmox_vm_deploy
+
+- name: Configure Domain Controller Networking
+  hosts: domain_controllers
+  become: yes
+  gather_facts: no
+  serial: 1  # Configure one at a time
+
+  pre_tasks:
+    - name: Load host variables
+      include_vars:
+        file: ../host_vars/{{ inventory_hostname }}.yml
+
+    - name: Use management connection for initial configuration
+      set_fact:
+        ansible_host: "{{ network.mgmt_ip }}"
+        ansible_user: "{{ network.mgmt_user }}"
+      when:
+        - network.mgmt_ip is defined
+        - network.mgmt_user is defined
+
+  roles:
+    - network_config
+    - hostname_config
+    - system_update
+    - install_packages
+    - user_config
+    - ssh_config
+    - ssh_hardening
+    - service_config
+
+  post_tasks:
+    - name: Remove temporary management interface connection
+      block:
+        - name: Delete management interface connection file (Ubuntu)
+          file:
+            path: "/etc/netplan/99-mgmt.yaml"
+            state: absent
+          when:
+            - os_type == "ubuntu"
+            - network.mgmt_remove_after_config | default(false)
+
+        - name: Delete management interface connection file (Rocky)
+          file:
+            path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
+            state: absent
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
+        - name: Apply netplan changes (Ubuntu)
+          command: netplan apply
+          when:
+            - os_type == "ubuntu"
+            - network.mgmt_remove_after_config | default(false)
+
+        - name: Reload NetworkManager (Rocky)
+          systemd:
+            name: NetworkManager
+            state: reloaded
+          when:
+            - os_type == "rocky"
+            - network.mgmt_remove_after_config | default(false)
+
+    - name: Display configuration summary
+      debug:
+        msg:
+          - "========================================="
+          - "{{ inventory_hostname | upper }} Configuration Complete!"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "IP: {{ network.ip_address }}/{{ network.netmask }}"
+          - "VLAN: {{ network.vlan }}"
+          - "Gateway: {{ network.gateway }}"
+          - "DNS: {{ network.dns_servers }}"
+          - "========================================="
+          - "Management interface {{ network.mgmt_interface }} removed"
+          - "========================================="
+          - "Next steps:"
+          - "  ssh {{ admin_user.username }}@{{ network.ip_address }}"
+          - "========================================="

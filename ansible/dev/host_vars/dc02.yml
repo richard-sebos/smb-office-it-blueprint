@@ -1,0 +1,95 @@
+---
+################################################################################
+# Host Variables: dc02
+# VM ID: 111
+# Role: Secondary Domain Controller
+################################################################################
+
+# VM Identity
+vmid: 111
+hostname: dc02
+fqdn: dc02.corp.company.local
+
+# Network Configuration
+network:
+  interface: ens18
+  ip_address: 10.0.120.11
+  netmask: 24
+  gateway: 10.0.120.1
+  vlan: 120
+  dns_servers:
+    - 10.0.120.10  # dc01 (primary)
+    - 127.0.0.1  # Self (secondary DC)
+    - 8.8.8.8  # Fallback
+  search_domain: corp.company.local
+
+  # Temporary management interface for initial configuration
+  mgmt_interface: ens19
+  mgmt_ip: 192.168.35.111  # On same subnet as Ansible server
+  mgmt_user: ansible-admin  # User account for initial connection
+  mgmt_remove_after_config: true  # Remove this interface after configuration is complete
+
+# OS Configuration
+os_type: ubuntu  # ubuntu or rocky
+os_version: "22.04"
+template_id: 9000  # Ubuntu 22.04 LTS template
+
+# System Resources
+resources:
+  cores: 2
+  memory: 4096
+  disk_size: 100G
+
+# Proxmox Settings
+proxmox:
+  node: pve
+  storage: vmDrive
+  pool: production
+  tags:
+    - server
+    - domain-controller
+    - secondary-dc
+    - ubuntu
+    - vlan-120
+
+# Software Packages
+packages:
+  base:
+    - vim
+    - git
+    - curl
+    - wget
+    - net-tools
+    - htop
+    - tmux
+    - tree
+
+  network_tools:
+    - tcpdump
+    - nmap
+    - netcat
+    - net-tools
+
+# User Configuration
+admin_user:
+  username: richard
+  groups:
+    - sudo  # Ubuntu sudo group
+    - adm
+  shell: /bin/bash
+  ssh_public_key_path: ~/.ssh/id_ed25519.pub
+
+# Services
+services:
+  enabled:
+    - sshd
+  disabled:
+    - bluetooth
+
+# SSH Hardening Configuration
+ssh_hardening:
+  allowed_networks:
+    - cidr: 10.0.0.0/8
+      description: Internal private network
+    - cidr: 192.168.0.0/16
+      description: Private network range
