@@ -32,7 +32,7 @@ network:
 # OS Configuration
 os_type: ubuntu  # ubuntu or rocky
 os_version: "22.04"
-template_id: 9000  # Ubuntu 22.04 LTS template
+template_id: 9075  # Ubuntu 22.04 LTS template
 
 # System Resources
 resources:
@@ -46,7 +46,6 @@ proxmox:
   storage: vmDrive
   pool: production
   tags:
-    - server
     - domain-controller
     - primary-dc
     - ubuntu
