@@ -1,0 +1,29 @@
+---
+################################################################################
+# Role: samba_ad_dc
+# Purpose: Install and configure Samba as Active Directory Domain Controller
+# Default Variables
+################################################################################
+
+# Domain Configuration
+domain: "corp.company.local"
+realm: "CORP.COMPANY.LOCAL"
+netbios_domain: "CORP"
+
+# DNS Configuration
+dns_forwarder: "8.8.8.8"
+dns_backend: "SAMBA_INTERNAL"
+
+# Server Role
+server_role: "dc"
+use_rfc2307: true
+
+# Firewall Configuration
+configure_firewall: true
+
+# Time Synchronization
+configure_chrony: true
+
+# Backup Configuration
+create_backup: true
+backup_dir: "/root/samba-backup-{{ ansible_date_time.date }}"

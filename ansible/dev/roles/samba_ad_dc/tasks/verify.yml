@@ -1,0 +1,90 @@
+---
+################################################################################
+# Verify Samba AD DC Installation
+################################################################################
+
+- name: Check samba-ad-dc service status
+  command: systemctl is-active samba-ad-dc
+  register: service_check
+  changed_when: false
+  failed_when: false
+
+- name: Display service status
+  debug:
+    msg: "✓ samba-ad-dc service is {{ service_check.stdout }}"
+
+- name: Test DNS resolution
+  command: host -t A {{ domain }} 127.0.0.1
+  register: dns_check
+  changed_when: false
+  failed_when: false
+
+- name: Display DNS check result
+  debug:
+    msg: "{{ '✓ DNS resolution working' if dns_check.rc == 0 else '✗ DNS resolution failed' }}"
+
+- name: Test DNS SRV records
+  command: host -t SRV _ldap._tcp.{{ domain }} 127.0.0.1
+  register: srv_check
+  changed_when: false
+  failed_when: false
+
+- name: Display SRV check result
+  debug:
+    msg: "{{ '✓ DNS SRV records present' if srv_check.rc == 0 else '✗ DNS SRV records missing' }}"
+
+- name: Test Kerberos authentication
+  shell: |
+    echo "{{ admin_password }}" | kinit administrator@{{ realm }}
+    klist
+    kdestroy
+  register: krb_check
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Display Kerberos check result
+  debug:
+    msg: "{{ '✓ Kerberos authentication successful' if krb_check.rc == 0 else '✗ Kerberos authentication failed' }}"
+
+- name: Test domain information
+  command: samba-tool domain info 127.0.0.1
+  register: domain_info_check
+  changed_when: false
+  failed_when: false
+
+- name: Display domain info check result
+  debug:
+    msg: "{{ '✓ Domain information accessible' if domain_info_check.rc == 0 else '✗ Domain information not accessible' }}"
+
+- name: Display verification summary
+  debug:
+    msg:
+      - "========================================="
+      - "Samba AD DC Verification Complete"
+      - "========================================="
+      - "Service: {{ 'RUNNING' if service_check.rc == 0 else 'FAILED' }}"
+      - "DNS: {{ 'OK' if dns_check.rc == 0 else 'FAILED' }}"
+      - "SRV Records: {{ 'OK' if srv_check.rc == 0 else 'FAILED' }}"
+      - "Kerberos: {{ 'OK' if krb_check.rc == 0 else 'FAILED' }}"
+      - "Domain Info: {{ 'OK' if domain_info_check.rc == 0 else 'FAILED' }}"
+      - "========================================="
+
+- name: Display next steps
+  debug:
+    msg:
+      - "========================================="
+      - "Next Steps:"
+      - "========================================="
+      - "1. Test domain functionality:"
+      - "   samba-tool domain level show"
+      - "   samba-tool user list"
+      - ""
+      - "2. Create test users:"
+      - "   samba-tool user add testuser --random-password"
+      - ""
+      - "3. Join clients to the domain"
+      - ""
+      - "4. Monitor logs:"
+      - "   journalctl -u samba-ad-dc -f"
+      - "========================================="

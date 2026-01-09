@@ -1,0 +1,123 @@
+---
+################################################################################
+# Configure Firewall for Samba AD DC
+################################################################################
+
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+    comment: 'SSH'
+
+- name: Allow DNS (TCP and UDP)
+  ufw:
+    rule: allow
+    port: '53'
+    proto: "{{ item }}"
+    comment: 'DNS'
+  loop:
+    - tcp
+    - udp
+
+- name: Allow Kerberos (TCP and UDP)
+  ufw:
+    rule: allow
+    port: '88'
+    proto: "{{ item }}"
+    comment: 'Kerberos'
+  loop:
+    - tcp
+    - udp
+
+- name: Allow RPC
+  ufw:
+    rule: allow
+    port: '135'
+    proto: tcp
+    comment: 'RPC'
+
+- name: Allow NetBIOS Name Service
+  ufw:
+    rule: allow
+    port: '137'
+    proto: udp
+    comment: 'NetBIOS Name Service'
+
+- name: Allow NetBIOS Datagram
+  ufw:
+    rule: allow
+    port: '138'
+    proto: udp
+    comment: 'NetBIOS Datagram'
+
+- name: Allow NetBIOS Session
+  ufw:
+    rule: allow
+    port: '139'
+    proto: tcp
+    comment: 'NetBIOS Session'
+
+- name: Allow LDAP (TCP and UDP)
+  ufw:
+    rule: allow
+    port: '389'
+    proto: "{{ item }}"
+    comment: 'LDAP'
+  loop:
+    - tcp
+    - udp
+
+- name: Allow SMB
+  ufw:
+    rule: allow
+    port: '445'
+    proto: tcp
+    comment: 'SMB'
+
+- name: Allow Kerberos Password (TCP and UDP)
+  ufw:
+    rule: allow
+    port: '464'
+    proto: "{{ item }}"
+    comment: 'Kerberos Password'
+  loop:
+    - tcp
+    - udp
+
+- name: Allow LDAPS
+  ufw:
+    rule: allow
+    port: '636'
+    proto: tcp
+    comment: 'LDAPS'
+
+- name: Allow Global Catalog
+  ufw:
+    rule: allow
+    port: '3268'
+    proto: tcp
+    comment: 'Global Catalog'
+
+- name: Allow Global Catalog SSL
+  ufw:
+    rule: allow
+    port: '3269'
+    proto: tcp
+    comment: 'Global Catalog SSL'
+
+- name: Allow Dynamic RPC
+  ufw:
+    rule: allow
+    port: 49152:65535
+    proto: tcp
+    comment: 'Dynamic RPC'
+
+- name: Enable UFW
+  ufw:
+    state: enabled

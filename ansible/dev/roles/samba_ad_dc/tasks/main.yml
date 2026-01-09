@@ -1,0 +1,182 @@
+---
+################################################################################
+# Role: samba_ad_dc
+# Purpose: Install and configure Samba Active Directory Domain Controller
+################################################################################
+
+- name: Check if running on Ubuntu
+  assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version in ["22.04", "24.04"]
+    fail_msg: "This role requires Ubuntu 22.04 or 24.04"
+
+- name: Display configuration
+  debug:
+    msg:
+      - "========================================="
+      - "Samba AD DC Configuration"
+      - "========================================="
+      - "Domain: {{ domain }}"
+      - "Realm: {{ realm }}"
+      - "NetBIOS: {{ netbios_domain }}"
+      - "DC Hostname: {{ hostname }}"
+      - "DC FQDN: {{ fqdn }}"
+      - "DC IP: {{ network.ip_address }}"
+      - "========================================="
+
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install Samba AD DC packages
+  apt:
+    name:
+      - samba
+      - winbind
+      - krb5-user
+      - krb5-config
+      - libpam-winbind
+      - libnss-winbind
+      - dnsutils
+      - net-tools
+      - vim
+      - chrony
+      - attr
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Stop and disable conflicting services
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+    masked: yes
+  loop:
+    - smbd
+    - nmbd
+    - winbind
+    - systemd-resolved
+  failed_when: false
+
+- name: Create backup directory
+  file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0700'
+  when: create_backup
+
+- name: Backup existing Samba configuration
+  copy:
+    src: /etc/samba/smb.conf
+    dest: "{{ backup_dir }}/smb.conf"
+    remote_src: yes
+  when:
+    - create_backup
+    - ansible_facts['stat'] is defined
+  failed_when: false
+
+- name: Backup existing Kerberos configuration
+  copy:
+    src: /etc/krb5.conf
+    dest: "{{ backup_dir }}/krb5.conf"
+    remote_src: yes
+  when:
+    - create_backup
+    - ansible_facts['stat'] is defined
+  failed_when: false
+
+- name: Backup existing Samba database
+  command: cp -r /var/lib/samba "{{ backup_dir }}/"
+  when: create_backup
+  failed_when: false
+
+- name: Remove old Samba configuration
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/samba/smb.conf
+    - /etc/krb5.conf
+
+- name: Provision Active Directory domain
+  command: >
+    samba-tool domain provision
+    --realm="{{ realm }}"
+    --domain="{{ netbios_domain }}"
+    --adminpass="{{ admin_password }}"
+    --server-role={{ server_role }}
+    --use-rfc2307
+    --dns-backend={{ dns_backend }}
+  args:
+    creates: /var/lib/samba/private/sam.ldb
+  register: provision_result
+
+- name: Display provision result
+  debug:
+    var: provision_result.stdout_lines
+  when: provision_result.changed
+
+- name: Configure Kerberos
+  copy:
+    src: /var/lib/samba/private/krb5.conf
+    dest: /etc/krb5.conf
+    remote_src: yes
+    mode: '0644'
+
+- name: Remove systemd-resolved DNS
+  file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Create DNS configuration for Samba AD DC
+  template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    mode: '0644'
+
+- name: Make resolv.conf immutable
+  file:
+    path: /etc/resolv.conf
+    attributes: +i
+
+- name: Configure time synchronization
+  systemd:
+    name: chrony
+    state: restarted
+    enabled: yes
+  when: configure_chrony
+
+- name: Unmask samba-ad-dc service
+  systemd:
+    name: samba-ad-dc
+    masked: no
+
+- name: Enable and start Samba AD DC service
+  systemd:
+    name: samba-ad-dc
+    state: started
+    enabled: yes
+
+- name: Wait for Samba AD DC to start
+  wait_for:
+    timeout: 10
+
+- name: Check if Samba AD DC is running
+  systemd:
+    name: samba-ad-dc
+  register: samba_service_status
+
+- name: Fail if Samba AD DC is not running
+  fail:
+    msg: "Samba AD DC service failed to start"
+  when: not samba_service_status.status.ActiveState == "active"
+
+- name: Configure firewall (UFW)
+  include_tasks: configure-firewall.yml
+  when: configure_firewall
+
+- name: Verify AD DC installation
+  include_tasks: verify.yml

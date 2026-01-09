@@ -1,0 +1,161 @@
+---
+################################################################################
+# Playbook: Configure Active Directory on Domain Controllers
+# Purpose: Install and configure Samba AD DC on dc01 and dc02
+################################################################################
+
+- name: Configure Primary Domain Controller (dc01)
+  hosts: dc01
+  become: yes
+  gather_facts: yes
+
+  vars_prompt:
+    - name: admin_password
+      prompt: "Enter the Administrator password for the domain"
+      private: yes
+      confirm: yes
+
+  pre_tasks:
+    - name: Load host variables for dc01
+      include_vars:
+        file: ../host_vars/dc01.yml
+
+    - name: Validate password complexity
+      assert:
+        that:
+          - admin_password | length >= 8
+        fail_msg: "Password must be at least 8 characters long"
+
+    - name: Display configuration
+      debug:
+        msg:
+          - "========================================="
+          - "Configuring Primary Domain Controller"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "FQDN: {{ fqdn }}"
+          - "IP: {{ network.ip_address }}"
+          - "Domain: {{ domain }}"
+          - "Realm: {{ realm }}"
+          - "NetBIOS: {{ netbios_domain }}"
+          - "========================================="
+
+  roles:
+    - role: samba_ad_dc
+      vars:
+        domain: "corp.company.local"
+        realm: "CORP.COMPANY.LOCAL"
+        netbios_domain: "CORP"
+
+  post_tasks:
+    - name: Display dc01 completion message
+      debug:
+        msg:
+          - "========================================="
+          - "PRIMARY DC (dc01) Configuration Complete!"
+          - "========================================="
+          - "Domain: {{ domain }}"
+          - "Realm: {{ realm }}"
+          - "DC01 IP: {{ network.ip_address }}"
+          - "========================================="
+          - "The primary domain controller is now operational."
+          - "Proceeding to configure secondary DC..."
+          - "========================================="
+
+- name: Configure Secondary Domain Controller (dc02)
+  hosts: dc02
+  become: yes
+  gather_facts: yes
+
+  vars:
+    admin_password: "{{ hostvars['dc01']['admin_password'] }}"
+
+  pre_tasks:
+    - name: Load host variables for dc02
+      include_vars:
+        file: ../host_vars/dc02.yml
+
+    - name: Display configuration
+      debug:
+        msg:
+          - "========================================="
+          - "Configuring Secondary Domain Controller"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "FQDN: {{ fqdn }}"
+          - "IP: {{ network.ip_address }}"
+          - "Domain: {{ domain }}"
+          - "Realm: {{ realm }}"
+          - "NetBIOS: {{ netbios_domain }}"
+          - "========================================="
+
+    - name: Wait for dc01 to be fully operational
+      wait_for:
+        host: 10.0.120.10
+        port: 389
+        timeout: 60
+      delegate_to: localhost
+
+  roles:
+    - role: samba_ad_dc
+      vars:
+        domain: "corp.company.local"
+        realm: "CORP.COMPANY.LOCAL"
+        netbios_domain: "CORP"
+
+  post_tasks:
+    - name: Display dc02 completion message
+      debug:
+        msg:
+          - "========================================="
+          - "SECONDARY DC (dc02) Configuration Complete!"
+          - "========================================="
+          - "Domain: {{ domain }}"
+          - "Realm: {{ realm }}"
+          - "DC02 IP: {{ network.ip_address }}"
+          - "========================================="
+
+- name: Final Configuration Summary
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Display final summary
+      debug:
+        msg:
+          - "========================================="
+          - "Active Directory Deployment Complete!"
+          - "========================================="
+          - ""
+          - "Domain: corp.company.local"
+          - "Realm: CORP.COMPANY.LOCAL"
+          - "NetBIOS: CORP"
+          - ""
+          - "Primary DC (dc01): 10.0.120.10"
+          - "Secondary DC (dc02): 10.0.120.11"
+          - ""
+          - "========================================="
+          - "Next Steps:"
+          - "========================================="
+          - ""
+          - "1. Verify replication between DCs:"
+          - "   On dc01: samba-tool drs showrepl"
+          - "   On dc02: samba-tool drs showrepl"
+          - ""
+          - "2. Create organizational units:"
+          - "   samba-tool ou create OU=Users,DC=corp,DC=company,DC=local"
+          - "   samba-tool ou create OU=Computers,DC=corp,DC=company,DC=local"
+          - "   samba-tool ou create OU=Groups,DC=corp,DC=company,DC=local"
+          - ""
+          - "3. Create user accounts:"
+          - "   samba-tool user add jdoe --given-name=John --surname=Doe"
+          - ""
+          - "4. Create groups:"
+          - "   samba-tool group add ITAdmins"
+          - "   samba-tool group addmembers ITAdmins jdoe"
+          - ""
+          - "5. Join workstations to the domain"
+          - ""
+          - "6. Configure Group Policy (if needed)"
+          - ""
+          - "========================================="
