@@ -30,7 +30,7 @@
             name: proxmox_vm_deploy
 
 - name: Configure Domain Controller Networking
-  hosts: domain_controllers
+  hosts: sdc01
   become: yes
   gather_facts: no
   serial: 1  # Configure one at a time
