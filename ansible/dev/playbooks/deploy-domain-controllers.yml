@@ -30,7 +30,7 @@
             name: proxmox_vm_deploy
 
 - name: Configure Domain Controller Networking
-  hosts: sdc01
+  hosts: domain_controllers
   become: yes
   gather_facts: no
   serial: 1  # Configure one at a time
@@ -39,14 +39,6 @@
     - name: Load host variables
       include_vars:
         file: ../host_vars/{{ inventory_hostname }}.yml
-
-    - name: Use management connection for initial configuration
-      set_fact:
-        ansible_host: "{{ network.mgmt_ip }}"
-        ansible_user: "{{ network.mgmt_user }}"
-      when:
-        - network.mgmt_ip is defined
-        - network.mgmt_user is defined
 
   roles:
     - network_config
@@ -59,38 +51,6 @@
     - service_config
 
   post_tasks:
-    - name: Remove temporary management interface connection
-      block:
-        - name: Delete management interface connection file (Ubuntu)
-          file:
-            path: "/etc/netplan/99-mgmt.yaml"
-            state: absent
-          when:
-            - os_type == "ubuntu"
-            - network.mgmt_remove_after_config | default(false)
-
-        - name: Delete management interface connection file (Rocky)
-          file:
-            path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
-            state: absent
-          when:
-            - os_type == "rocky"
-            - network.mgmt_remove_after_config | default(false)
-
-        - name: Apply netplan changes (Ubuntu)
-          command: netplan apply
-          when:
-            - os_type == "ubuntu"
-            - network.mgmt_remove_after_config | default(false)
-
-        - name: Reload NetworkManager (Rocky)
-          systemd:
-            name: NetworkManager
-            state: reloaded
-          when:
-            - os_type == "rocky"
-            - network.mgmt_remove_after_config | default(false)
-
     - name: Display configuration summary
       debug:
         msg:
@@ -102,8 +62,6 @@
           - "VLAN: {{ network.vlan }}"
           - "Gateway: {{ network.gateway }}"
           - "DNS: {{ network.dns_servers }}"
-          - "========================================="
-          - "Management interface {{ network.mgmt_interface }} removed"
           - "========================================="
           - "Next steps:"
           - "  ssh {{ admin_user.username }}@{{ network.ip_address }}"

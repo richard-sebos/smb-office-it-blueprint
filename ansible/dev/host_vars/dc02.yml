@@ -23,12 +23,6 @@ network:
     - 8.8.8.8  # Fallback
   search_domain: corp.company.local
 
-  # Temporary management interface for initial configuration
-  mgmt_interface: ens19
-  mgmt_ip: 192.168.35.111  # On same subnet as Ansible server
-  mgmt_user: ansible-admin  # User account for initial connection
-  mgmt_remove_after_config: true  # Remove this interface after configuration is complete
-
 # OS Configuration
 os_type: ubuntu  # ubuntu or rocky
 os_version: "22.04"
