@@ -1,16 +1,28 @@
 # Understanding Security Policies: From Tools to User Profiles
 
+
+- There one thing I learnt in my time in IT, we people understand what happens behind the sense when doing IT task and projects.
+- This leads 2 to 3 day request being ask as no hurry, can you get it done by the end of the day, that actual happen.
+- Whether to be ill time request or initial prototypes, one thing usually get left for the next state of the task or project, security.
+- It's not that all security is ignored, the base security is normally there last minute changes will not have the smae security that a well plan project will.
+  
+- I recently teasers is it time for a Linux business desktop.
+- I do think there are certaim business cases there this could work but if all it offers is the same AD directory functionality then why should business users use?
+- Because it is free? There are people, include myself that got into Linux because of free licensing or Open Source.
+- A free item that doesn't solve a basic need will not be used.
+- So what can Linux bring of value?
+  
 ## Introduction: The Problem with Traditional Security
 
 Imagine you're setting up security for a new employee, Sarah, who's a Finance Manager. In a traditional IT setup, you'd need to:
 
-1. Configure her Yubikey for 2FA
+1. Configure her for 2FA Login
 2. Add her to the right Active Directory groups
-3. Set up SELinux permissions for Finance files
+3. Set up permissions for Finance files
 4. Configure firewall rules for her laptop
 5. Enable audit logging for her account
 6. Set up encrypted file access
-7. Configure SSH keys if she needs server access
+7. Configure remote access
 8. Set backup retention policies for her data
 
 That's **8 different systems** to configure, each with its own syntax, documentation, and potential for misconfiguration. Miss one step, and you've either locked her out or left a security hole.
