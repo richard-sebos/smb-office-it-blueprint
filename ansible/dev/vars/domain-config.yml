@@ -1,0 +1,140 @@
+---
+################################################################################
+# Samba AD Domain Configuration Variables
+################################################################################
+# Edit these values for your environment
+################################################################################
+
+# Domain Configuration
+ad_domain: "sebostech.local"
+ad_realm: "SEBOSTECH.LOCAL"
+ad_netbios: "SEBOSTECH"
+
+# Domain Controller Configuration
+ad_dc_hostname: "dc01"
+ad_dc_ip: "192.168.35.59"  # Updated to match actual DC IP
+
+# Administrator Password
+# IMPORTANT: Change this to a strong password!
+# Requirements: min 8 chars, uppercase, lowercase, number, special char
+ad_admin_password: "Admin@Pass123"
+
+# DNS Configuration
+ad_dns_forwarder: "8.8.8.8"
+
+# Network Configuration (optional - for static IP setup)
+ad_network_interface: "ens18"  # Change to match your interface
+ad_netmask: "255.255.255.0"
+ad_gateway: "192.168.35.1"
+
+# Samba Server Role
+ad_server_role: "dc"
+ad_dns_backend: "SAMBA_INTERNAL"
+ad_use_rfc2307: true
+
+# Firewall Configuration
+ad_enable_firewall: true
+ad_allow_ssh: true
+
+# Backup Configuration
+ad_backup_dir: "/root/samba-backup"
+ad_backup_existing: true
+
+# Optional: Additional DNS forwarders
+ad_dns_forwarders:
+  - "8.8.8.8"
+  - "1.1.1.1"
+
+# Optional: Custom organizational units to create
+ad_create_ous:
+  - "Servers"
+  - "Workstations"
+  - "Users"
+  - "Groups"
+
+# Optional: Test users to create (for testing only!)
+ad_test_users:
+  - username: "testuser1"
+    firstname: "Test"
+    lastname: "User One"
+    password: "Test@Pass123"
+  - username: "testuser2"
+    firstname: "Test"
+    lastname: "User Two"
+    password: "Test@Pass456"
+
+# Optional: Security groups to create
+ad_security_groups:
+  - "IT Admins"
+  - "Finance Users"
+  - "HR Users"
+
+################################################################################
+# Advanced Options (usually don't need to change)
+################################################################################
+
+# Package installation
+ad_packages:
+  - samba
+  - winbind
+  - krb5-user
+  - krb5-config
+  - libpam-winbind
+  - libnss-winbind
+  - dnsutils
+  - net-tools
+  - vim
+  - chrony
+  - attr
+
+# Services to disable (conflict with Samba AD)
+ad_disable_services:
+  - smbd
+  - nmbd
+  - winbind
+  - systemd-resolved
+
+# Firewall ports for Samba AD DC
+ad_firewall_ports:
+  - { port: 22, proto: tcp, comment: "SSH" }
+  - { port: 53, proto: tcp, comment: "DNS TCP" }
+  - { port: 53, proto: udp, comment: "DNS UDP" }
+  - { port: 88, proto: tcp, comment: "Kerberos TCP" }
+  - { port: 88, proto: udp, comment: "Kerberos UDP" }
+  - { port: 135, proto: tcp, comment: "RPC" }
+  - { port: 137, proto: udp, comment: "NetBIOS Name" }
+  - { port: 138, proto: udp, comment: "NetBIOS Datagram" }
+  - { port: 139, proto: tcp, comment: "NetBIOS Session" }
+  - { port: 389, proto: tcp, comment: "LDAP TCP" }
+  - { port: 389, proto: udp, comment: "LDAP UDP" }
+  - { port: 445, proto: tcp, comment: "SMB" }
+  - { port: 464, proto: tcp, comment: "Kerberos Password TCP" }
+  - { port: 464, proto: udp, comment: "Kerberos Password UDP" }
+  - { port: 636, proto: tcp, comment: "LDAPS" }
+  - { port: 3268, proto: tcp, comment: "Global Catalog" }
+  - { port: 3269, proto: tcp, comment: "Global Catalog SSL" }
+  - { port: "49152:65535", proto: tcp, comment: "Dynamic RPC" }
+
+################################################################################
+# Client Configuration (for Oracle Linux 9 clients)
+################################################################################
+
+# Client settings
+use_fqdn: false  # If false, users login as "username", if true as "username@domain"
+create_home_dirs: true
+home_dir_umask: "0077"
+
+# SSSD Configuration
+sssd_cache_credentials: true
+sssd_enumerate_users: false
+sssd_fallback_homedir: "/home/%u"  # Use simple username (matches use_fqdn: false)
+sssd_default_shell: "/bin/bash"
+
+# Sudo access for AD groups (optional)
+# Uncomment and customize to grant sudo access to specific AD groups
+sudo_ad_groups:
+  - "Domain Admins"
+  - "IT Admins"
+
+# Example: No sudo access
+# sudo_ad_groups: []
