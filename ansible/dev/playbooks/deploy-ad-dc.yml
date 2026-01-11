@@ -16,7 +16,7 @@
 ################################################################################
 
 - name: Deploy Samba Active Directory Domain Controller
-  hosts: sdc01
+  hosts: sdc02
   become: yes
   gather_facts: yes
 
