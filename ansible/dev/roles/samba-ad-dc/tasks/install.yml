@@ -1,0 +1,72 @@
+---
+################################################################################
+# Package installation tasks
+################################################################################
+
+- name: Include DNS fix tasks (required for apt to work)
+  include_tasks: fix-dns.yml
+
+- name: Include repository fix tasks
+  include_tasks: fix-repos.yml
+
+- name: Wait for apt lock to be released
+  shell: while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+  changed_when: false
+  ignore_errors: yes
+
+- name: Clean apt cache
+  command: apt-get clean
+  changed_when: false
+  ignore_errors: yes
+
+- name: Remove apt lists
+  shell: rm -rf /var/lib/apt/lists/*
+  changed_when: false
+  ignore_errors: yes
+
+- name: Update apt cache via shell (after repo fix)
+  shell: apt-get update
+  register: apt_update_shell
+  changed_when: false
+  retries: 3
+  delay: 10
+  until: apt_update_shell.rc == 0
+
+- name: Display apt update output
+  debug:
+    var: apt_update_shell.stdout_lines
+
+- name: Search for samba package to verify repos work
+  shell: apt-cache search ^samba$ || apt-cache policy samba
+  register: samba_search
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display samba package search result
+  debug:
+    var: samba_search.stdout_lines
+
+- name: Show sources.list content
+  shell: cat /etc/apt/sources.list
+  register: sources_content
+  changed_when: false
+
+- name: Display sources.list
+  debug:
+    var: sources_content.stdout_lines
+
+- name: Install Samba AD DC packages
+  shell: |
+    DEBIAN_FRONTEND=noninteractive apt-get install -y {{ ad_packages | join(' ') }}
+  register: pkg_install
+  changed_when: "'0 newly installed' not in pkg_install.stdout"
+  retries: 3
+  delay: 10
+  until: pkg_install.rc == 0
+
+- name: Ensure ufw is installed (for firewall configuration)
+  shell: |
+    DEBIAN_FRONTEND=noninteractive apt-get install -y ufw
+  register: ufw_install
+  changed_when: "'0 newly installed' not in ufw_install.stdout"
+  when: ad_enable_firewall

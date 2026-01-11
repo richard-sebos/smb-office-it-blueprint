@@ -1,0 +1,22 @@
+---
+################################################################################
+# Main tasks for Samba AD DC role
+################################################################################
+
+- name: Include pre-installation tasks
+  include_tasks: pre-install.yml
+
+- name: Include package installation tasks
+  include_tasks: install.yml
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+
+- name: Include domain provisioning tasks
+  include_tasks: provision.yml
+
+- name: Include post-installation tasks
+  include_tasks: post-install.yml
+
+- name: Include verification tasks
+  include_tasks: verify.yml

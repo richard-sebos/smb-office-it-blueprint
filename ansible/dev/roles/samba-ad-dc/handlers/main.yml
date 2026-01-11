@@ -1,0 +1,18 @@
+---
+################################################################################
+# Handlers for Samba AD DC role
+################################################################################
+
+- name: restart samba-ad-dc
+  systemd:
+    name: samba-ad-dc
+    state: restarted
+
+- name: restart chrony
+  systemd:
+    name: chrony
+    state: restarted
+
+- name: reload firewall
+  command: ufw reload
+  changed_when: true

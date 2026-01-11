@@ -1,0 +1,55 @@
+---
+################################################################################
+# Fix DNS resolution before package installation
+################################################################################
+
+- name: Check current DNS configuration
+  shell: cat /etc/resolv.conf
+  register: current_resolv
+  changed_when: false
+
+- name: Display current resolv.conf
+  debug:
+    var: current_resolv.stdout_lines
+
+- name: Check if resolv.conf is immutable
+  shell: lsattr /etc/resolv.conf | grep -q '^....i'
+  register: resolv_immutable
+  changed_when: false
+  failed_when: false
+
+- name: Remove immutable flag from resolv.conf if present
+  command: chattr -i /etc/resolv.conf
+  when: resolv_immutable.rc == 0
+  ignore_errors: yes
+
+- name: Create temporary resolv.conf with Google DNS for package installation
+  copy:
+    content: |
+      # Temporary DNS configuration for package installation
+      nameserver 8.8.8.8
+      nameserver 1.1.1.1
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Test DNS resolution with Google DNS
+  shell: |
+    nslookup archive.ubuntu.com 8.8.8.8 || dig @8.8.8.8 archive.ubuntu.com || getent hosts archive.ubuntu.com
+  register: dns_test
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display DNS test result
+  debug:
+    msg: "DNS resolution test: {{ 'SUCCESS' if dns_test.rc == 0 else 'FAILED' }}"
+
+- name: Verify resolv.conf was updated
+  shell: cat /etc/resolv.conf
+  register: new_resolv
+  changed_when: false
+
+- name: Display new resolv.conf
+  debug:
+    var: new_resolv.stdout_lines

@@ -1,0 +1,90 @@
+================================================================================
+Samba Active Directory Domain Controller Information
+================================================================================
+Deployed: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+Deployed by: Ansible
+
+Domain Configuration:
+---------------------
+Domain:          {{ ad_domain }}
+Realm:           {{ ad_realm }}
+NetBIOS:         {{ ad_netbios }}
+
+Domain Controller:
+------------------
+Hostname:        {{ ad_dc_hostname }}.{{ ad_domain }}
+IP Address:      {{ ad_dc_ip }}
+DNS Backend:     {{ ad_dns_backend }}
+Server Role:     {{ ad_server_role }}
+
+Administrator Account:
+----------------------
+Username:        administrator
+Password:        (as configured in vars/domain-config.yml)
+
+Useful Commands:
+----------------
+# List all domain users
+samba-tool user list
+
+# Create a new user
+samba-tool user add <username> --given-name="First" --surname="Last"
+
+# Set user password
+samba-tool user setpassword <username>
+
+# List all groups
+samba-tool group list
+
+# Add user to group
+samba-tool group addmembers "Domain Admins" <username>
+
+# Show domain level
+samba-tool domain level show
+
+# Show DNS zones
+samba-tool dns zonelist 127.0.0.1
+
+# Test Kerberos
+kinit administrator@{{ ad_realm }}
+klist
+
+# Check DNS
+host -t A {{ ad_domain }} 127.0.0.1
+host -t SRV _ldap._tcp.{{ ad_domain }} 127.0.0.1
+
+# View service status
+systemctl status samba-ad-dc
+
+# View logs
+journalctl -u samba-ad-dc -f
+
+Joining Windows Clients:
+-------------------------
+1. Set DNS to {{ ad_dc_ip }}
+2. Join domain: {{ ad_domain }}
+3. Use administrator credentials to join
+
+Joining Linux Clients:
+----------------------
+1. Install realmd, sssd, adcli packages
+2. Set DNS to {{ ad_dc_ip }}
+3. realm discover {{ ad_domain }}
+4. realm join -U administrator {{ ad_domain }}
+
+Firewall Ports (Open):
+----------------------
+SSH:       22/tcp
+DNS:       53/tcp, 53/udp
+Kerberos:  88/tcp, 88/udp
+LDAP:      389/tcp, 389/udp
+SMB:       445/tcp
+LDAPS:     636/tcp
+GC:        3268-3269/tcp
+Dynamic:   49152-65535/tcp
+
+Backup Location:
+----------------
+{{ ad_backup_dir }}
+
+================================================================================

@@ -1,0 +1,75 @@
+---
+################################################################################
+# Fix Ubuntu repository configuration
+################################################################################
+
+- name: Check current sources.list
+  command: cat /etc/apt/sources.list
+  register: sources_list_content
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display current sources.list
+  debug:
+    var: sources_list_content.stdout_lines
+
+- name: Detect Ubuntu version
+  shell: . /etc/os-release && echo $VERSION_CODENAME
+  register: ubuntu_codename
+  changed_when: false
+
+- name: Display Ubuntu codename
+  debug:
+    msg: "Ubuntu codename: {{ ubuntu_codename.stdout }}"
+
+- name: Backup existing sources.list
+  copy:
+    src: /etc/apt/sources.list
+    dest: /etc/apt/sources.list.backup
+    remote_src: yes
+  ignore_errors: yes
+
+- name: Create proper sources.list for Ubuntu 24.04 (Noble)
+  copy:
+    content: |
+      # Ubuntu 24.04 LTS (Noble Numbat) - Main repositories
+      deb http://archive.ubuntu.com/ubuntu/ noble main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ noble-updates main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ noble-security main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ noble-backports main restricted universe multiverse
+
+      # Source repositories (optional)
+      # deb-src http://archive.ubuntu.com/ubuntu/ noble main restricted universe multiverse
+    dest: /etc/apt/sources.list
+    owner: root
+    group: root
+    mode: '0644'
+  when: ubuntu_codename.stdout == "noble"
+
+- name: Create proper sources.list for Ubuntu 22.04 (Jammy)
+  copy:
+    content: |
+      # Ubuntu 22.04 LTS (Jammy Jellyfish) - Main repositories
+      deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse
+      deb http://archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
+
+      # Source repositories (optional)
+      # deb-src http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
+    dest: /etc/apt/sources.list
+    owner: root
+    group: root
+    mode: '0644'
+  when: ubuntu_codename.stdout == "jammy"
+
+- name: Test network connectivity to Ubuntu archives
+  shell: |
+    ping -c 2 archive.ubuntu.com
+  register: ping_test
+  ignore_errors: yes
+  changed_when: false
+
+- name: Display network test result
+  debug:
+    msg: "Network to archive.ubuntu.com: {{ 'OK' if ping_test.rc == 0 else 'FAILED' }}"

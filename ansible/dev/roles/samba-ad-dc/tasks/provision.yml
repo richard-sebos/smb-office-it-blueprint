@@ -1,0 +1,102 @@
+---
+################################################################################
+# Domain provisioning tasks
+################################################################################
+
+- name: Provision Samba AD domain
+  shell: |
+    samba-tool domain provision \
+      --realm={{ ad_realm }} \
+      --domain={{ ad_netbios }} \
+      --adminpass='{{ ad_admin_password }}' \
+      --server-role={{ ad_server_role }} \
+      --use-rfc2307 \
+      --dns-backend={{ ad_dns_backend }} 2>&1
+  args:
+    creates: /var/lib/samba/private/sam.ldb
+  register: domain_provision_result
+  failed_when: domain_provision_result.rc != 0
+  no_log: false  # We need to see errors, password won't appear in output
+
+- name: Display provision result (success)
+  debug:
+    msg: "Domain provisioned successfully"
+  when: domain_provision_result.changed
+
+- name: Display provision errors if any (without password)
+  debug:
+    msg: "{{ domain_provision_result.stdout_lines | default([]) }}"
+  when: domain_provision_result.failed | default(false)
+
+- name: Copy Kerberos configuration
+  copy:
+    src: /var/lib/samba/private/krb5.conf
+    dest: /etc/krb5.conf
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0644'
+  when: domain_provision_result.changed
+
+- name: Configure DNS resolution
+  block:
+    - name: Remove systemd-resolved stub resolver
+      file:
+        path: /etc/resolv.conf
+        state: absent
+
+    - name: Create resolv.conf for Samba DNS
+      template:
+        src: resolv.conf.j2
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Make resolv.conf immutable
+      file:
+        path: /etc/resolv.conf
+        attributes: +i
+      ignore_errors: yes
+
+- name: Create organizational units
+  command: >
+    samba-tool ou create "OU={{ item }},{{ ad_realm | regex_replace('\.', ',DC=') | regex_replace('^', 'DC=') }}"
+  loop: "{{ ad_create_ous }}"
+  when:
+    - ad_create_ous is defined
+    - ad_create_ous | length > 0
+  ignore_errors: yes
+
+- name: Create security groups
+  command: >
+    samba-tool group add "{{ item }}"
+  loop: "{{ ad_security_groups }}"
+  when:
+    - ad_security_groups is defined
+    - ad_security_groups | length > 0
+  ignore_errors: yes
+
+- name: Create test users
+  command: >
+    samba-tool user add {{ item.username }}
+    --given-name="{{ item.firstname }}"
+    --surname="{{ item.lastname }}"
+    --random-password
+  loop: "{{ ad_test_users }}"
+  when:
+    - ad_test_users is defined
+    - ad_test_users | length > 0
+  ignore_errors: yes
+  register: test_user_creation
+
+- name: Set test user passwords
+  command: >
+    samba-tool user setpassword {{ item.username }}
+    --newpassword='{{ item.password }}'
+  loop: "{{ ad_test_users }}"
+  when:
+    - ad_test_users is defined
+    - ad_test_users | length > 0
+  ignore_errors: yes
+  no_log: true

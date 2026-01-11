@@ -1,0 +1,41 @@
+---
+# Default variables for Samba AD DC role
+# These can be overridden in vars/domain-config.yml
+
+# Domain defaults
+ad_domain: "example.local"
+ad_realm: "EXAMPLE.LOCAL"
+ad_netbios: "EXAMPLE"
+
+# DC defaults
+ad_dc_hostname: "dc01"
+ad_dc_ip: "192.168.1.10"
+
+# Administrator password default (CHANGE THIS!)
+ad_admin_password: "ChangeMeAdmin123!"
+
+# DNS defaults
+ad_dns_forwarder: "8.8.8.8"
+ad_dns_backend: "SAMBA_INTERNAL"
+
+# Server role
+ad_server_role: "dc"
+ad_use_rfc2307: true
+
+# Backup
+ad_backup_existing: true
+ad_backup_dir: "/root/samba-backup"
+
+# Firewall
+ad_enable_firewall: true
+ad_allow_ssh: true
+
+# Network
+ad_network_interface: ""  # Auto-detect if empty
+ad_netmask: "255.255.255.0"
+ad_gateway: ""
+
+# Optional features
+ad_create_ous: []
+ad_test_users: []
+ad_security_groups: []

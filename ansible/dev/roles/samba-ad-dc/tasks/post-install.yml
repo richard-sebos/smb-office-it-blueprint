@@ -1,0 +1,55 @@
+---
+################################################################################
+# Post-installation tasks
+################################################################################
+
+- name: Enable and start Samba AD DC service
+  systemd:
+    name: samba-ad-dc
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Wait for Samba AD DC to be ready
+  wait_for:
+    port: 389
+    host: 127.0.0.1
+    delay: 5
+    timeout: 60
+
+- name: Configure firewall rules
+  block:
+    - name: Allow firewall ports for Samba AD DC
+      shell: |
+        ufw allow {{ item.port }}/{{ item.proto }} comment '{{ item.comment }}'
+      loop: "{{ ad_firewall_ports }}"
+      register: ufw_rules
+      changed_when: "'Rule added' in ufw_rules.stdout or 'Rule updated' in ufw_rules.stdout"
+
+    - name: Set UFW default policy to deny
+      command: ufw default deny
+      changed_when: false
+
+    - name: Enable UFW firewall
+      shell: |
+        echo "y" | ufw enable
+      register: ufw_enable
+      changed_when: "'Firewall is active' in ufw_enable.stdout or 'enabled' in ufw_enable.stdout"
+
+  when: ad_enable_firewall
+
+- name: Create domain admin helper script
+  template:
+    src: ad-admin-tools.sh.j2
+    dest: /root/ad-admin-tools.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create domain info file
+  template:
+    src: domain-info.txt.j2
+    dest: /root/domain-info.txt
+    owner: root
+    group: root
+    mode: '0644'

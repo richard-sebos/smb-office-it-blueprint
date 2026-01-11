@@ -1,0 +1,63 @@
+---
+################################################################################
+# Verification tasks
+################################################################################
+
+- name: Verify Samba AD DC service is running
+  systemd:
+    name: samba-ad-dc
+  register: samba_service
+  failed_when: samba_service.status.ActiveState != 'active'
+
+- name: Verify DNS resolution
+  command: host -t A {{ ad_domain }} 127.0.0.1
+  register: dns_test
+  changed_when: false
+  failed_when: dns_test.rc != 0
+
+- name: Verify DNS SRV records
+  command: host -t SRV _ldap._tcp.{{ ad_domain }} 127.0.0.1
+  register: srv_test
+  changed_when: false
+  failed_when: srv_test.rc != 0
+
+- name: Verify Kerberos authentication
+  shell: |
+    echo '{{ ad_admin_password }}' | kinit administrator@{{ ad_realm }}
+    klist
+    kdestroy
+  register: kerberos_test
+  changed_when: false
+  no_log: true
+  failed_when: kerberos_test.rc != 0
+
+- name: Get domain information
+  command: samba-tool domain level show
+  register: domain_info
+  changed_when: false
+
+- name: Display domain information
+  debug:
+    var: domain_info.stdout_lines
+
+- name: List domain users
+  command: samba-tool user list
+  register: user_list
+  changed_when: false
+
+- name: Display user list
+  debug:
+    var: user_list.stdout_lines
+
+- name: Verification summary
+  debug:
+    msg:
+      - "=========================================="
+      - "Verification Tests Complete"
+      - "=========================================="
+      - "✓ Samba AD DC service is running"
+      - "✓ DNS resolution working"
+      - "✓ DNS SRV records present"
+      - "✓ Kerberos authentication successful"
+      - "✓ Domain information accessible"
+      - "=========================================="

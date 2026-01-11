@@ -1,0 +1,99 @@
+---
+################################################################################
+# Pre-installation tasks
+################################################################################
+
+- name: Set hostname
+  hostname:
+    name: "{{ ad_dc_hostname }}.{{ ad_domain }}"
+  register: hostname_changed
+
+- name: Update /etc/hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Create backup directory
+  file:
+    path: "{{ ad_backup_dir }}"
+    state: directory
+    mode: '0700'
+  when: ad_backup_existing
+
+- name: Backup existing Samba configuration
+  block:
+    - name: Check if smb.conf exists
+      stat:
+        path: /etc/samba/smb.conf
+      register: smb_conf_stat
+
+    - name: Backup smb.conf
+      copy:
+        src: /etc/samba/smb.conf
+        dest: "{{ ad_backup_dir }}/smb.conf.{{ ansible_date_time.epoch }}"
+        remote_src: yes
+      when: smb_conf_stat.stat.exists
+
+    - name: Check if krb5.conf exists
+      stat:
+        path: /etc/krb5.conf
+      register: krb5_conf_stat
+
+    - name: Backup krb5.conf
+      copy:
+        src: /etc/krb5.conf
+        dest: "{{ ad_backup_dir }}/krb5.conf.{{ ansible_date_time.epoch }}"
+        remote_src: yes
+      when: krb5_conf_stat.stat.exists
+
+    - name: Check if Samba directory exists
+      stat:
+        path: /var/lib/samba
+      register: samba_dir_stat
+
+    - name: Backup Samba directory
+      shell: |
+        cp -r /var/lib/samba "{{ ad_backup_dir }}/samba-lib-{{ ansible_date_time.epoch }}"
+      when: samba_dir_stat.stat.exists and samba_dir_stat.stat.isdir
+
+  when: ad_backup_existing
+
+- name: Stop and disable conflicting services
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+    masked: no
+  loop: "{{ ad_disable_services }}"
+  ignore_errors: yes
+
+- name: Mask systemd-resolved
+  systemd:
+    name: systemd-resolved
+    masked: yes
+  ignore_errors: yes
+
+- name: Kill any remaining systemd-resolved processes
+  shell: killall systemd-resolved || true
+  changed_when: false
+  ignore_errors: yes
+
+- name: Wait for systemd-resolved to fully stop
+  wait_for:
+    path: /run/systemd/resolve/stub-resolv.conf
+    state: absent
+    timeout: 10
+  ignore_errors: yes
+
+- name: Remove existing Samba configuration
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/samba/smb.conf
+    - /etc/krb5.conf
+  when: smb_conf_stat is defined and smb_conf_stat.stat.exists
