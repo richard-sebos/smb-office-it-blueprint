@@ -11,7 +11,11 @@
 - Because it is free? There are people, include myself that got into Linux because of free licensing or Open Source.
 - A free item that doesn't solve a basic need will not be used.
 - So what can Linux bring of value?
-  
+
+- Linux Distro come with enterprise level security that Linux professional can explain how they protect the system and why they are needed that is a about features and not values.
+- As IT pros, we tend to say ephemeral operating systems, we can put a secure device that is secure can.
+- We add cool terms like rebuild day and even if a automated process the business will here somebody needs to do something every day
+
 ## Introduction: The Problem with Traditional Security
 
 Imagine you're setting up security for a new employee, Sarah, who's a Finance Manager. In a traditional IT setup, you'd need to:
