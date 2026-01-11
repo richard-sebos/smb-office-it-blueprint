@@ -42,7 +42,7 @@ What if instead of thinking about tools (PAM, SELinux, firewalls), we thought ab
 
 These are **business requirements**, not technical specifications. But somehow we need to translate them into the hundreds of low-level settings across our infrastructure.
 
-The solution is a **three-layer architecture**:
+The solution is a **four-layer architecture**:
 
 ```
 BUSINESS LAYER:    Who are you?
@@ -52,14 +52,28 @@ POLICY LAYER:      What do you need?
     ↓              (Secure logon, encrypted data, network access)
 
 TOOL LAYER:        How do we enforce it?
-                   (PAM, SELinux, firewalls, SSH)
+    ↓              (PAM, SELinux, firewalls, SSH)
+
+DEPLOYMENT:        Deploy it consistently?
+                   (Ansible)
 ```
+- 
+- This is not new but as part of the project I am working, I want to define standart security template that can be used to setup Linux desktops
+- there templates can be used by business to secure they Linux desktops.
 
-Let's break down each layer.
-
+ 
+This seems complex and why going to these steps?
 ---
 
+- Linux, correct or not has a reparations of being more secure that Windows.
+- There a feeling that once installed you change check off the security
+- And well there are more virus for Windows than Linux, there are still more steps than installing and update
+
 ## Layer 1: Business Layer - User Profiles (The "Who")
+- With the intruduction of AI, there will be a neew set of small business with limited number of user but still needing enterprise level security.
+- When it comes to security, not all users are created equal.
+- A receipt in an area open to the public may need tigher security than employees working in the back office but finance users may need stricture security.
+- This is more than just what they have access to, and include kios mode setup in open space, short auto log off, or MFA and secure keys or cards
 
 At the top, we define **user profiles** based on job roles. These are easy for HR and management to understand:
 
@@ -144,6 +158,17 @@ At the top, we define **user profiles** based on job roles. These are easy for H
 ---
 
 ## Layer 2: Policy Layer - Security Objects (The "What")
+- this is where we take this like the 8 layers above and start expanding it out
+- User Login
+	- Receiption kois mode with limited access, so standard login with AD
+  - Finance/HR users AD and MFA
+  - Senior managers and partners AD, MFA and security keys like Yuboic
+
+- file permission
+  - No local storage on any user devices
+  - Receipion - Read access to limited network shares
+  - Financial/HR - Special share drives that are encrypted and protected 
+  - Senior Managers - Have access to most shared drives but from limited devices
 
 This is the magic layer that translates business needs into security requirements. We group related policies into **security objects** that can be mixed and matched.
 
