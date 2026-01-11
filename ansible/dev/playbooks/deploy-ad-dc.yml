@@ -1,0 +1,69 @@
+---
+################################################################################
+# Ansible Playbook: Deploy Samba Active Directory Domain Controller
+################################################################################
+# Purpose: Automated deployment of Samba AD DC on Ubuntu Server
+# Platform: Ubuntu Server 22.04 LTS or 24.04 LTS
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts deploy-ad-dc.yml
+#
+# Requirements:
+#   - Ansible 2.9+
+#   - Ubuntu Server 22.04/24.04 target host
+#   - SSH access to target host
+#   - sudo privileges on target host
+################################################################################
+
+- name: Deploy Samba Active Directory Domain Controller
+  hosts: samba_dc
+  become: yes
+  gather_facts: yes
+
+  vars_files:
+    - vars/domain-config.yml
+
+  pre_tasks:
+    - name: Verify target is Ubuntu
+      fail:
+        msg: "This playbook only supports Ubuntu Server (detected: {{ ansible_distribution }})"
+      when: ansible_distribution != "Ubuntu"
+
+    - name: Verify Ubuntu version
+      fail:
+        msg: "This playbook requires Ubuntu 22.04 or 24.04 (detected: {{ ansible_distribution_version }})"
+      when: ansible_distribution_version is version('22.04', '<') or ansible_distribution_version is version('25.04', '>=')
+
+    - name: Display deployment information
+      debug:
+        msg:
+          - "Deploying Samba AD DC"
+          - "Domain: {{ ad_domain }}"
+          - "Realm: {{ ad_realm }}"
+          - "NetBIOS: {{ ad_netbios }}"
+          - "DC Hostname: {{ ad_dc_hostname }}"
+          - "DC IP: {{ ad_dc_ip }}"
+
+  roles:
+    - samba-ad-dc
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg:
+          - "=========================================="
+          - "Samba AD DC Deployment Complete!"
+          - "=========================================="
+          - "Domain: {{ ad_domain }}"
+          - "Realm: {{ ad_realm }}"
+          - "DC FQDN: {{ ad_dc_hostname }}.{{ ad_domain }}"
+          - "DC IP: {{ ad_dc_ip }}"
+          - ""
+          - "Next Steps:"
+          - "1. Test DNS: host -t A {{ ad_domain }} {{ ad_dc_ip }}"
+          - "2. Test Kerberos: kinit administrator@{{ ad_realm }}"
+          - "3. List users: samba-tool user list"
+          - "4. Join clients to domain"
+          - ""
+          - "Administrator password is set as configured in vars/domain-config.yml"
+          - "=========================================="
