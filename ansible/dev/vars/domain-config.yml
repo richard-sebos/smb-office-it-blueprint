@@ -11,8 +11,8 @@ ad_realm: "SEBOSTECH.LOCAL"
 ad_netbios: "SEBOSTECH"
 
 # Domain Controller Configuration
-ad_dc_hostname: "dc01"
-ad_dc_ip: "10.0.120.10"  # Updated to match actual DC IP
+ad_dc_hostname: "dc02"
+ad_dc_ip: "10.0.120.11"  # Updated to match actual DC IP
 
 # Administrator Password
 # IMPORTANT: Change this to a strong password!
