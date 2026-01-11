@@ -1,0 +1,66 @@
+---
+################################################################################
+# Role: silverblue_nightly_reset
+# Tasks: Configure nightly automated reset for immutable workstations
+################################################################################
+
+- name: Check if nightly reset is enabled
+  debug:
+    msg: "Configuring nightly reset for {{ hostname }} at {{ nightly_reset.reset_time }}"
+  when: nightly_reset.enabled | default(false)
+
+- name: Create nightly reset script
+  template:
+    src: workstation-reset.sh.j2
+    dest: /usr/local/bin/workstation-reset.sh
+    owner: root
+    group: root
+    mode: '0755'
+  when: nightly_reset.enabled | default(false)
+
+- name: Create systemd service for nightly reset
+  template:
+    src: workstation-nightly-reset.service.j2
+    dest: /etc/systemd/system/workstation-nightly-reset.service
+    owner: root
+    group: root
+    mode: '0644'
+  when: nightly_reset.enabled | default(false)
+  notify: reload systemd
+
+- name: Create systemd timer for nightly reset
+  template:
+    src: workstation-nightly-reset.timer.j2
+    dest: /etc/systemd/system/workstation-nightly-reset.timer
+    owner: root
+    group: root
+    mode: '0644'
+  when: nightly_reset.enabled | default(false)
+  notify: reload systemd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable nightly reset timer
+  systemd:
+    name: workstation-nightly-reset.timer
+    enabled: yes
+    state: started
+  when: nightly_reset.enabled | default(false)
+
+- name: Create log directory for reset operations
+  file:
+    path: /var/log/workstation-reset
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Display nightly reset configuration
+  debug:
+    msg:
+      - "Nightly reset configured for {{ hostname }}"
+      - "Reset time: {{ nightly_reset.reset_time }}"
+      - "Logs backed up to: {{ logging.rsyslog.target }}"
+      - "Timer status: {{ 'enabled' if nightly_reset.enabled else 'disabled' }}"

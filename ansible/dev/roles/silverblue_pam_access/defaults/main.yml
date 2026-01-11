@@ -1,0 +1,9 @@
+---
+################################################################################
+# Role: silverblue_pam_access
+# Purpose: Configure PAM access control for workstation-specific group restrictions
+################################################################################
+
+# Default: allow all authenticated users
+# Override in host_vars with specific group restrictions
+pam_access_rules: []

@@ -1,0 +1,22 @@
+---
+################################################################################
+# Role: silverblue_printer_config
+# Purpose: Configure printers on Fedora Silverblue (baked into OSTree)
+################################################################################
+
+# CUPS configuration
+cups_enabled: true
+cups_listen_localhost: true
+cups_allow_remote_admin: false
+
+# Default printer settings
+default_printer_protocol: "ipp"
+default_printer_driver: "hplip"
+
+# Printer drivers to layer onto OSTree
+printer_drivers:
+  - cups
+  - cups-filters
+  - hplip
+  - hplip-libs
+  - gutenprint-cups

@@ -1,0 +1,15 @@
+---
+################################################################################
+# Role: silverblue_nightly_reset
+# Purpose: Configure automated nightly workstation reset for public-area security
+################################################################################
+
+# Default reset time (2 AM)
+nightly_reset_time: "02:00"
+
+# Monitoring server for log backup
+monitoring_server: "10.0.120.60"
+monitoring_log_path: "/var/log/workstations"
+
+# Reset enabled by default (can be disabled in host_vars)
+nightly_reset_enabled: true

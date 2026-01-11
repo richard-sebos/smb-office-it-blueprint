@@ -1,0 +1,88 @@
+---
+################################################################################
+# Role: silverblue_printer_config
+# Tasks: Configure printers on Fedora Silverblue
+################################################################################
+
+- name: Check if printers are defined
+  debug:
+    msg: "Configuring {{ printers | length }} printer(s) for {{ hostname }}"
+  when: printers is defined
+
+- name: Layer printer packages onto OSTree
+  command: rpm-ostree install {{ printer_drivers | join(' ') }}
+  register: ostree_printer_layer
+  changed_when: "'Installing' in ostree_printer_layer.stdout"
+  failed_when: false
+
+- name: Reboot if printer packages were layered
+  reboot:
+    msg: "Rebooting to apply printer driver layering"
+    reboot_timeout: 300
+  when: ostree_printer_layer.changed
+
+- name: Wait for system after printer package installation
+  wait_for_connection:
+    delay: 10
+    timeout: 300
+  when: ostree_printer_layer.changed
+
+- name: Ensure CUPS is enabled and started
+  systemd:
+    name: cups
+    enabled: yes
+    state: started
+
+- name: Configure CUPS to listen on localhost only
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^Listen '
+    line: 'Listen localhost:631'
+    backup: yes
+  notify: restart cups
+
+- name: Disable CUPS remote administration
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^WebInterface'
+    line: 'WebInterface No'
+    backup: yes
+  notify: restart cups
+
+- name: Create printers configuration directory
+  file:
+    path: /etc/cups/printers
+    state: directory
+    owner: root
+    group: lp
+    mode: '0755'
+
+- name: Configure network printers
+  include_tasks: configure_printer.yml
+  loop: "{{ printers }}"
+  loop_control:
+    loop_var: printer
+  when: printers is defined
+
+- name: Set default printer
+  command: "lpoptions -d {{ item.name }}"
+  loop: "{{ printers }}"
+  when:
+    - printers is defined
+    - item.default | default(false)
+  changed_when: false
+
+- name: Test printer connectivity
+  command: "lpstat -p {{ item.name }}"
+  loop: "{{ printers }}"
+  when: printers is defined
+  register: printer_status
+  changed_when: false
+  failed_when: false
+
+- name: Display printer configuration summary
+  debug:
+    msg:
+      - "Printers configured for {{ hostname }}:"
+      - "{% for p in printers %}- {{ p.name }} ({{ p.ip }}) - {{ 'Default' if p.default else 'Available' }}{% endfor %}"
+  when: printers is defined

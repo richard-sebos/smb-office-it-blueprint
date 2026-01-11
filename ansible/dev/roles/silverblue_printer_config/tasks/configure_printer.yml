@@ -1,0 +1,37 @@
+---
+################################################################################
+# Task: Configure individual printer
+# Included by main.yml for each printer
+################################################################################
+
+- name: "Check if printer {{ printer.name }} exists"
+  command: "lpstat -p {{ printer.name }}"
+  register: printer_exists
+  changed_when: false
+  failed_when: false
+
+- name: "Add printer {{ printer.name }}"
+  command: >
+    lpadmin
+    -p {{ printer.name }}
+    -v {{ printer.protocol | default('ipp') }}://{{ printer.ip }}/ipp/print
+    -m {{ printer.driver | default('drv:///sample.drv/generic.ppd') }}
+    -L "{{ printer.location | default('Office') }}"
+    -D "{{ printer.description | default(printer.name) }}"
+    -E
+  when: printer_exists.rc != 0
+  register: printer_added
+
+- name: "Enable printer {{ printer.name }}"
+  command: "cupsenable {{ printer.name }}"
+  when: printer_added.changed or printer_exists.rc == 0
+
+- name: "Accept jobs on printer {{ printer.name }}"
+  command: "cupsaccept {{ printer.name }}"
+  when: printer_added.changed or printer_exists.rc == 0
+
+- name: "Set printer {{ printer.name }} options"
+  command: "lpadmin -p {{ printer.name }} -o {{ item.key }}={{ item.value }}"
+  loop: "{{ printer.options | default({}) | dict2items }}"
+  when: printer.options is defined
+  changed_when: false

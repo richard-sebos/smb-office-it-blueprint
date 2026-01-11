@@ -1,0 +1,19 @@
+[Unit]
+Description=Workstation Nightly Reset Timer
+Documentation=file:///usr/local/bin/workstation-reset.sh
+
+[Timer]
+# Run at {{ nightly_reset.reset_time }} every day
+OnCalendar=*-*-* {{ nightly_reset.reset_time }}:00
+Persistent=true
+
+# If system was off at reset time, run on next boot
+# (but wait 5 minutes after boot to avoid conflicts)
+OnBootSec=5min
+
+# Randomize start time by up to 5 minutes to avoid all workstations
+# resetting at exactly the same time (reduces network load)
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

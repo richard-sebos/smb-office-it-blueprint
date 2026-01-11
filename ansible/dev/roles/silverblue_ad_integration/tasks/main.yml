@@ -1,0 +1,128 @@
+---
+################################################################################
+# Role: silverblue_ad_integration
+# Tasks: Configure AD authentication via SSSD + Kerberos
+################################################################################
+
+- name: Check if we're on Fedora Silverblue
+  fail:
+    msg: "This role is designed for Fedora Silverblue (OSTree-based systems)"
+  when: ansible_distribution != "Fedora" or ansible_pkg_mgr != "atomic_container"
+
+- name: Layer required AD packages onto OSTree
+  command: rpm-ostree install {{ ad_required_packages | join(' ') }}
+  register: ostree_layer
+  changed_when: "'Installing' in ostree_layer.stdout"
+  notify: reboot workstation
+
+- name: Check if reboot is needed for OSTree layering
+  stat:
+    path: /run/ostree-booted
+  register: ostree_status
+
+- name: Reboot if packages were layered
+  reboot:
+    msg: "Rebooting to apply rpm-ostree package layering"
+    reboot_timeout: 300
+  when: ostree_layer.changed
+
+- name: Wait for system to come back online
+  wait_for_connection:
+    delay: 10
+    timeout: 300
+  when: ostree_layer.changed
+
+- name: Create Kerberos configuration
+  template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart sssd
+
+- name: Create SSSD configuration
+  template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart sssd
+
+- name: Create SSSD config directory
+  file:
+    path: /etc/sssd/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable automatic home directory creation
+  lineinfile:
+    path: /etc/pam.d/common-session
+    line: "session optional pam_mkhomedir.so skel=/etc/skel umask=0077"
+    insertafter: "session.*pam_unix.so"
+    create: yes
+  when: ansible_os_family == "Debian"
+
+- name: Enable automatic home directory creation (RHEL/Fedora)
+  command: authselect enable-feature with-mkhomedir
+  when: ansible_os_family == "RedHat"
+  ignore_errors: yes
+
+- name: Enable and start SSSD service
+  systemd:
+    name: sssd
+    enabled: yes
+    state: started
+
+- name: Enable and start oddjobd service (for mkhomedir)
+  systemd:
+    name: oddjobd
+    enabled: yes
+    state: started
+
+- name: Test AD connectivity
+  command: "realm discover {{ ad_integration.domain }}"
+  register: realm_discover
+  changed_when: false
+  failed_when: false
+
+- name: Display AD discovery result
+  debug:
+    msg: "{{ realm_discover.stdout }}"
+  when: realm_discover.rc == 0
+
+- name: Join Active Directory domain
+  command: >
+    realm join --computer-ou="OU=Workstations,OU=Computers,DC=corp,DC=company,DC=local"
+    --user={{ ad_join_user }}
+    --verbose
+    {{ ad_integration.domain }}
+  environment:
+    AD_PASSWORD: "{{ ad_join_password }}"
+  when:
+    - ad_join_user is defined
+    - ad_join_password is defined
+    - "'configured: no' in realm_discover.stdout or realm_discover.rc != 0"
+  register: realm_join
+  no_log: true
+
+- name: Configure PAM to use SSSD for authentication
+  command: authselect select sssd with-mkhomedir --force
+  when: ansible_os_family == "RedHat"
+
+- name: Verify SSSD is working
+  command: "id {{ test_ad_user }}@{{ ad_integration.domain }}"
+  register: sssd_test
+  when: test_ad_user is defined
+  changed_when: false
+  failed_when: false
+
+- name: Display SSSD test result
+  debug:
+    msg: "SSSD is working: {{ sssd_test.stdout }}"
+  when:
+    - test_ad_user is defined
+    - sssd_test.rc == 0

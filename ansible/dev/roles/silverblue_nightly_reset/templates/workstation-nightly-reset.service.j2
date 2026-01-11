@@ -1,0 +1,25 @@
+[Unit]
+Description=Workstation Nightly Reset Service
+Documentation=file:///usr/local/bin/workstation-reset.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/workstation-reset.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=workstation-reset
+User=root
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=no
+ProtectSystem=no
+ProtectHome=no
+
+# Timeout after 10 minutes
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

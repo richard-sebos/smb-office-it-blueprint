@@ -1,0 +1,38 @@
+---
+################################################################################
+# Role: silverblue_ad_integration
+# Purpose: Configure SSSD + Kerberos for Active Directory authentication
+################################################################################
+
+# AD domain configuration
+ad_domain: "corp.company.local"
+ad_realm: "CORP.COMPANY.LOCAL"
+ad_workgroup: "CORP"
+
+# Domain controllers
+ad_domain_controllers:
+  - dc01.corp.company.local
+  - dc02.corp.company.local
+
+# SSSD configuration
+sssd_cache_credentials: true
+sssd_enumerate_users: false
+sssd_fallback_homedir: "/home/%u@%d"
+sssd_default_shell: "/bin/bash"
+
+# Kerberos configuration
+krb5_ticket_lifetime: "10h"
+krb5_renew_lifetime: "1d"
+krb5_forwardable: true
+
+# Required packages (RPM-OSTree layering)
+ad_required_packages:
+  - sssd
+  - sssd-tools
+  - sssd-ad
+  - krb5-workstation
+  - realmd
+  - oddjob
+  - oddjob-mkhomedir
+  - adcli
+  - samba-common-tools

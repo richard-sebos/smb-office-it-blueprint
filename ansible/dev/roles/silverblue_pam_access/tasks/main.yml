@@ -1,0 +1,62 @@
+---
+################################################################################
+# Role: silverblue_pam_access
+# Tasks: Configure PAM access.conf for group-based workstation restrictions
+################################################################################
+
+- name: Check if access control is configured
+  debug:
+    msg: "Configuring PAM access control for {{ hostname }}"
+
+- name: Backup existing access.conf
+  copy:
+    src: /etc/security/access.conf
+    dest: /etc/security/access.conf.backup
+    remote_src: yes
+    force: no
+
+- name: Create custom access.conf from template
+  template:
+    src: access.conf.j2
+    dest: /etc/security/access.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when: access_control.pam_access_rules is defined
+
+- name: Enable pam_access in system-auth
+  lineinfile:
+    path: /etc/pam.d/system-auth
+    line: "account required pam_access.so"
+    insertafter: "^account.*required.*pam_unix.so"
+    state: present
+
+- name: Enable pam_access in password-auth
+  lineinfile:
+    path: /etc/pam.d/password-auth
+    line: "account required pam_access.so"
+    insertafter: "^account.*required.*pam_unix.so"
+    state: present
+
+- name: Enable pam_access in gdm-password (for GNOME login)
+  lineinfile:
+    path: /etc/pam.d/gdm-password
+    line: "account required pam_access.so"
+    insertafter: "^account.*required.*pam_unix.so"
+    state: present
+  when: desktop_environment.de_type is defined
+
+- name: Test access control syntax
+  command: pamtester system-auth root authenticate
+  register: pam_test
+  changed_when: false
+  failed_when: false
+  ignore_errors: yes
+
+- name: Display access control configuration
+  debug:
+    msg:
+      - "PAM access control configured for {{ hostname }}"
+      - "Allowed groups: {{ access_control.allowed_ad_groups | join(', ') }}"
+      - "Access rules: {{ access_control.pam_access_rules | length }} rules configured"

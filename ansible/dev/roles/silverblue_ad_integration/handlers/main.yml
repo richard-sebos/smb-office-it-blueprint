@@ -1,0 +1,14 @@
+---
+################################################################################
+# Handlers for silverblue_ad_integration role
+################################################################################
+
+- name: restart sssd
+  systemd:
+    name: sssd
+    state: restarted
+
+- name: reboot workstation
+  reboot:
+    msg: "Rebooting for rpm-ostree changes"
+    reboot_timeout: 300

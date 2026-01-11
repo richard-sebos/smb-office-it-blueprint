@@ -1,0 +1,429 @@
+---
+################################################################################
+# Host Variables: ws-reception01
+# VM ID: 310
+# Role: Receptionist Workstation (Public Area, High Security)
+# OS: Fedora Silverblue (Immutable)
+################################################################################
+
+# VM Identity
+vmid: 310
+hostname: ws-reception01
+fqdn: ws-reception01.corp.company.local
+
+# Network Configuration
+network:
+  interface: ens18
+  ip_address: 10.0.130.25
+  netmask: 24
+  gateway: 10.0.130.1
+  vlan: 130
+  dns_servers:
+    - 10.0.120.10  # dc01
+    - 10.0.120.11  # dc02
+  search_domain: corp.company.local
+
+  # Temporary management interface for initial configuration
+  mgmt_interface: ens19
+  mgmt_ip: 192.168.35.135  # On same subnet as Ansible server
+  mgmt_user: ansible-admin  # User account for initial connection
+  mgmt_remove_after_config: true  # Remove this interface after configuration is complete
+
+# OS Configuration
+os_type: fedora_silverblue  # Immutable OS variant
+os_version: "41"
+template_id: 9300  # Fedora Silverblue 41 template (to be created)
+
+# Workstation Profile
+workstation_type: receptionist
+workstation_profile: high_security_public_area
+security_level: high  # Public area, physical access risk
+
+# System Resources
+resources:
+  cores: 2
+  memory: 4096  # 4GB RAM sufficient for web-only workstation
+  disk_size: 60G  # Smaller disk, no local file storage needed
+
+# Proxmox Settings
+proxmox:
+  node: pve
+  storage: vmDrive
+  pool: production
+  tags:
+    - workstation
+    - receptionist
+    - silverblue
+    - immutable
+    - public-area
+    - vlan-130
+
+# Immutable OS Configuration
+immutable_config:
+  os_type: silverblue
+  ostree_remote: fedora
+  ostree_ref: fedora/41/x86_64/silverblue
+  nightly_reset: true
+  reset_time: "02:00"  # 2 AM daily reset
+  preserve_logs_before_reset: true
+  log_backup_destination: "monitoring01:/var/log/workstations/ws-reception01/"
+
+# Active Directory Integration
+ad_integration:
+  enabled: true
+  domain: corp.company.local
+  realm: CORP.COMPANY.LOCAL
+  domain_controllers:
+    - dc01.corp.company.local
+    - dc02.corp.company.local
+
+  # SSSD Configuration
+  sssd:
+    enabled: true
+    cache_credentials: true
+    enumerate_users: false  # Don't list all AD users
+    fallback_homedir: /home/%u@%d
+    default_shell: /bin/bash
+
+  # Kerberos Configuration
+  kerberos:
+    default_realm: CORP.COMPANY.LOCAL
+    ticket_lifetime: 10h  # 8 AM to 6 PM workday
+    renew_lifetime: 1d
+    forwardable: true
+
+# Access Control
+access_control:
+  # Only Receptionists group can log in to this workstation
+  allowed_ad_groups:
+    - Receptionists
+    - GG-Reception  # Primary department group
+
+  # Deny all other groups explicitly
+  deny_all_except_allowed: true
+
+  # PAM access.conf configuration
+  pam_access_rules:
+    - "+ : (Receptionists) : ws-reception01"
+    - "+ : (GG-Reception) : ws-reception01"
+    - "- : ALL : ws-reception01"
+
+# Session Security
+session_security:
+  idle_timeout_minutes: 3  # Aggressive timeout for public area
+  screen_lock_enabled: true
+  lock_on_suspend: true
+  lock_on_lid_close: false  # Desktop workstation, not laptop
+  auto_logout_after_hours: 24  # Force logout after 24 hours (should never happen)
+
+# Desktop Environment Configuration
+desktop_environment:
+  de_type: gnome  # GNOME on Silverblue
+  browser_only_mode: true  # Web-based applications only
+  default_browser: firefox
+
+  # Desktop restrictions
+  allow_local_file_storage: false  # Discourage local files
+  allow_software_install: false  # Immutable OS + no user software install
+  allow_system_settings: false  # No access to system settings
+  show_desktop_icons: false
+  show_trash_icon: false
+
+  # Default applications
+  default_apps:
+    browser: firefox
+    file_manager: nautilus  # Limited access, network shares only
+
+  # Web-based tools
+  browser_bookmarks:
+    - name: "Company Intranet"
+      url: "https://intranet.corp.company.local"
+    - name: "Webmail"
+      url: "https://mail.corp.company.local"
+    - name: "Calendar"
+      url: "https://calendar.corp.company.local"
+    - name: "Visitor Log"
+      url: "https://visitors.corp.company.local"
+
+# Application Configuration (Flatpak on Silverblue)
+applications:
+  flatpak_enabled: true
+  flatpak_apps:
+    - org.mozilla.firefox
+    - org.gnome.Calendar
+    - org.gnome.Contacts
+
+  # No native RPM layering (keep system immutable)
+  rpm_ostree_layered_packages: []
+
+# Printer Configuration
+printers:
+  - name: HP-Reception-Printer
+    ip: 10.0.140.55
+    protocol: ipp
+    driver: hplip
+    make_model: "HP LaserJet Pro M404"
+    default: true
+    location: "Front Desk"
+    description: "Reception area printer"
+
+  - name: HP-Reception-Fax
+    ip: 10.0.140.56
+    protocol: ipp
+    driver: hplip
+    make_model: "HP OfficeJet Pro 9015"
+    default: false
+    location: "Front Desk"
+    description: "Reception fax/scanner"
+
+# Printer drivers baked into OSTree
+printer_drivers_in_ostree:
+  - hplip
+  - cups
+  - cups-filters
+
+# File Shares (Network Home Directory)
+file_shares:
+  # Network home directory on file server
+  home_directory:
+    server: files01.corp.company.local
+    share: home
+    mount_point: /home/%u
+    protocol: cifs
+    auto_mount: true
+    credentials: kerberos  # Use Kerberos ticket for authentication
+
+  # Shared folders
+  shared_folders:
+    - name: general-admin
+      server: files01.corp.company.local
+      share: shared/general-admin
+      mount_point: /mnt/shared/general-admin
+      protocol: cifs
+      auto_mount: true
+      access: read-write
+
+# Logging Configuration
+logging:
+  # Real-time log forwarding to monitoring server
+  rsyslog:
+    enabled: true
+    target: 10.0.120.60  # monitoring01
+    protocol: tcp
+    port: 514
+    log_all_auth: true
+    log_all_sudo: true  # Should never happen, but log if it does
+    log_print_jobs: true
+
+  # Local logging (cleared nightly)
+  local_logs:
+    retention_days: 1  # Logs wiped daily at 2 AM
+    max_size_mb: 100
+
+  # Auditd configuration
+  auditd:
+    enabled: true
+    log_file_access: true
+    log_user_commands: true
+    log_network_connections: true
+    forward_to_syslog: true  # Forward to monitoring01 via rsyslog
+
+# Monitoring and Alerting
+monitoring:
+  level: verbose
+
+  # Alert triggers
+  alerts:
+    failed_login: true  # Alert on failed login attempts
+    unauthorized_group: true  # Alert if non-Receptionist tries to log in
+    disabled_user_attempt: true  # Alert if disabled AD user tries to log in
+    multiple_failed_attempts: 3  # Alert after 3 failed attempts
+    print_job_errors: true
+    nightly_reset_failure: true  # Critical: alert if reset fails
+
+  # Alert destinations
+  alert_email: it-team@corp.company.local
+  alert_sms_critical: true  # SMS for physical security concerns
+
+# Firewall Configuration
+firewall:
+  enabled: true
+  default_zone: workstation
+
+  # Allowed outbound services
+  allowed_services:
+    - dns  # To dc01/dc02
+    - ldap  # AD authentication
+    - ldaps  # Secure LDAP
+    - kerberos  # Kerberos tickets
+    - http  # Web browsing
+    - https  # Secure web browsing
+    - ipp  # Printing to VLAN 140
+    - cifs  # File shares to files01
+    - rsyslog  # Logging to monitoring01
+
+  # Allowed outbound ports
+  allowed_ports:
+    - 53/udp  # DNS
+    - 88/tcp  # Kerberos
+    - 88/udp  # Kerberos
+    - 389/tcp  # LDAP
+    - 636/tcp  # LDAPS
+    - 445/tcp  # SMB/CIFS
+    - 631/tcp  # IPP printing
+    - 514/tcp  # Rsyslog
+
+  # Allowed destinations (whitelisted IPs)
+  allowed_destinations:
+    - 10.0.120.10  # dc01
+    - 10.0.120.11  # dc02
+    - 10.0.120.50  # files01
+    - 10.0.120.60  # monitoring01
+    - 10.0.140.55  # HP-Reception-Printer
+    - 10.0.140.56  # HP-Reception-Fax
+
+  # Block everything else
+  block_server_vlan: true  # Cannot access Server VLAN except whitelisted
+  block_mgmt_vlan: true  # Cannot access Management VLAN
+  block_other_workstations: true  # Cannot access other workstations
+
+# SSH Configuration
+ssh:
+  enabled: true  # For Ansible management only
+  port: 22
+  allow_root_login: false
+  password_authentication: false
+  pubkey_authentication: true
+
+  # Only allow from Ansible control server
+  allowed_networks:
+    - cidr: 192.168.35.0/24
+      description: Management network (Ansible)
+    - cidr: 10.0.120.40/32
+      description: Ansible control server
+
+  # SSH will be disabled after initial setup (immutable workstation)
+  disable_after_deployment: false  # Keep for management
+
+# Security Hardening
+security_hardening:
+  selinux:
+    enabled: true
+    mode: enforcing  # Silverblue default
+    type: targeted
+
+  # No sudo access for regular users
+  sudo_allowed_users: []
+  sudo_allowed_groups: []
+
+  # Disable USB storage
+  disable_usb_storage: true
+
+  # Disable Bluetooth (not needed for receptionist)
+  disable_bluetooth: true
+
+  # Disable cameras/microphones (privacy in public area)
+  disable_webcam: true
+  disable_microphone: false  # Might need for web conferencing
+
+  # FIPS mode (if required for compliance)
+  fips_mode: false  # Enable if HIPAA/SOX/PCI-DSS required
+
+# Nightly Reset Configuration
+nightly_reset:
+  enabled: true
+  reset_time: "02:00"
+
+  # Reset script steps
+  steps:
+    - name: sync_logs
+      action: "rsync -avz /var/log/* monitoring01:/var/log/workstations/ws-reception01/$(date +%Y%m%d)/"
+
+    - name: clear_home_directory
+      action: "rm -rf /home/*"
+
+    - name: clear_tmp
+      action: "rm -rf /tmp/* /var/tmp/*"
+
+    - name: clear_browser_data
+      action: "rm -rf /home/*/.mozilla /home/*/.cache"
+
+    - name: ostree_reset
+      action: "rpm-ostree reset"
+
+    - name: reboot
+      action: "systemctl reboot"
+
+  # Post-reboot verification
+  verify_clean_boot: true
+  alert_on_failure: true
+
+# Backup Configuration (minimal, mostly logs)
+backup:
+  enabled: false  # No local data to backup (network home directory backed up on files01)
+  logs_backed_up_to_monitoring: true
+
+# Compliance Settings
+compliance:
+  # Audit trail for who accessed workstation
+  log_all_logins: true
+  log_retention_days: 90  # On monitoring01
+
+  # No local data storage (GDPR right to erasure enforced automatically)
+  enforce_no_local_storage: true
+
+  # HIPAA/SOC2/PCI-DSS ready
+  ready_for_compliance_audit: true
+
+# Services
+services:
+  enabled:
+    - sshd  # For Ansible management
+    - sssd  # AD authentication
+    - rsyslog  # Remote logging
+    - cups  # Printing
+    - gdm  # GNOME Display Manager
+    - auditd  # Security auditing
+
+  disabled:
+    - bluetooth  # Not needed
+    - cups-browsed  # Not needed for direct IP printing
+    - avahi-daemon  # Not needed
+
+# Comments and Notes
+notes: |
+  This is a high-security receptionist workstation for public areas.
+
+  Key security features:
+  - Immutable OS (Fedora Silverblue OSTree)
+  - Nightly reset at 2 AM (wipes malware, local files, browser data)
+  - AD authentication via SSSD + Kerberos
+  - Only "Receptionists" group can log in (PAM access.conf)
+  - 3-minute idle timeout (public area security)
+  - Real-time log forwarding to monitoring01
+  - Network home directory (no local file storage)
+  - Web-based applications only (browser-only mode)
+  - Printer access to reception printers on IoT VLAN
+
+  Security scenarios protected against:
+  - Terminated employee access (AD account disabled)
+  - Unauthorized user access (PAM group restrictions)
+  - Malware persistence (nightly reset + immutable OS)
+  - Data leakage (no local file storage)
+  - Physical security breach (3-minute auto-lock)
+  - Compromised session (Kerberos ticket expiration)
+  - Rootkit/backdoor (read-only root filesystem)
+
+  Logging:
+  - All login attempts (successful and failed)
+  - All authorization failures (valid user, wrong group)
+  - All print jobs
+  - All system events
+  - All network connections
+  - 90-day retention on monitoring01 (compliance ready)
+
+  Compliance:
+  - HIPAA ready (audit trail, access control)
+  - SOC 2 ready (logging, immutable infrastructure)
+  - PCI-DSS ready (no credit card data stored locally)
+  - GDPR ready (no personal data persists, automatic erasure)
