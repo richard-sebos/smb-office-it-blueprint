@@ -12,7 +12,7 @@ ad_netbios: "SEBOSTECH"
 
 # Domain Controller Configuration
 ad_dc_hostname: "dc01"
-ad_dc_ip: "192.168.35.59"  # Updated to match actual DC IP
+ad_dc_ip: "10.0.120.10"  # Updated to match actual DC IP
 
 # Administrator Password
 # IMPORTANT: Change this to a strong password!
@@ -25,7 +25,7 @@ ad_dns_forwarder: "8.8.8.8"
 # Network Configuration (optional - for static IP setup)
 ad_network_interface: "ens18"  # Change to match your interface
 ad_netmask: "255.255.255.0"
-ad_gateway: "192.168.35.1"
+ad_gateway: "10.0.120.1"
 
 # Samba Server Role
 ad_server_role: "dc"
