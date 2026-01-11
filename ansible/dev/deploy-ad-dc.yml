@@ -21,7 +21,7 @@
   gather_facts: yes
 
   vars_files:
-    - ../vars/domain-config.yml
+    - vars/domain-config.yml
 
   pre_tasks:
     - name: Verify target is Ubuntu
