@@ -65,7 +65,7 @@ packages:
 
 # User Configuration
 admin_user:
-  username: richard
+  username: ansible-admin
   groups:
     - sudo  # Ubuntu sudo group
     - adm
