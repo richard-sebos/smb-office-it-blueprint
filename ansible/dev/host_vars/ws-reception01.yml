@@ -7,7 +7,7 @@
 ################################################################################
 
 # VM Identity
-vmid: 310
+vmid: 320
 hostname: ws-reception01
 fqdn: ws-reception01.corp.company.local
 
