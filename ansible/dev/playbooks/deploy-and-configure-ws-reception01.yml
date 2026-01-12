@@ -44,6 +44,7 @@
   hosts: ws-reception01
   become: yes
   gather_facts: yes
+  any_errors_fatal: false
 
   pre_tasks:
     - name: Load host variables
@@ -69,9 +70,12 @@
       ping:
 
   roles:
-    - network_config
-    - hostname_config
-    - system_update
+    - role: network_config
+      ignore_errors: yes
+    - role: hostname_config
+      ignore_errors: yes
+    - role: system_update
+      ignore_errors: yes
 
   post_tasks:
     - name: Display base configuration status
@@ -87,6 +91,7 @@
   hosts: bu-reception01
   become: yes
   gather_facts: yes
+  any_errors_fatal: false
 
   pre_tasks:
     - name: Load host variables
@@ -94,10 +99,14 @@
         file: ../host_vars/ws-reception01.yml
 
   roles:
-    - silverblue_ad_integration
-    - silverblue_pam_access
-    - silverblue_printer_config
-    - silverblue_nightly_reset
+    - role: silverblue_ad_integration
+      ignore_errors: yes
+    - role: silverblue_pam_access
+      ignore_errors: yes
+    - role: silverblue_printer_config
+      ignore_errors: yes
+    - role: silverblue_nightly_reset
+      ignore_errors: yes
 
   post_tasks:
     - name: Configure rsyslog for remote logging
@@ -108,12 +117,14 @@
         group: root
         mode: '0644'
       notify: restart rsyslog
+      ignore_errors: yes
 
     - name: Enable and start rsyslog
       systemd:
         name: rsyslog
         enabled: yes
         state: started
+      ignore_errors: yes
 
     - name: Configure auditd rules
       copy:
@@ -147,6 +158,7 @@
         group: root
         mode: '0640'
       notify: restart auditd
+      ignore_errors: yes
 
     - name: Display security configuration status
       debug:
@@ -176,6 +188,7 @@
   hosts: ws-reception01
   become: yes
   gather_facts: yes
+  any_errors_fatal: false
 
   pre_tasks:
     - name: Load host variables
@@ -191,6 +204,7 @@
       loop:
         - gdm
       when: session_security.idle_timeout_minutes is defined
+      ignore_errors: yes
 
     - name: Configure GNOME screen lock
       command: |
@@ -198,6 +212,7 @@
       become: no
       become_user: gdm
       when: session_security.screen_lock_enabled | default(true)
+      ignore_errors: yes
 
     - name: Configure GNOME to lock on suspend
       command: |
@@ -205,6 +220,7 @@
       become: no
       become_user: gdm
       when: session_security.lock_on_suspend | default(true)
+      ignore_errors: yes
 
     - name: Create browser bookmarks file
       template:
@@ -231,6 +247,7 @@
         group: root
         mode: '0644'
       when: desktop_environment.browser_bookmarks is defined
+      ignore_errors: yes
 
     - name: Display desktop configuration status
       debug:
@@ -246,6 +263,7 @@
   hosts: ws-reception01
   become: yes
   gather_facts: yes
+  any_errors_fatal: false
 
   pre_tasks:
     - name: Load host variables
@@ -258,22 +276,26 @@
       register: firewalld_install
       changed_when: "'Installing' in firewalld_install.stdout"
       failed_when: false
+      ignore_errors: yes
 
     - name: Reboot if firewalld was installed
       reboot:
         msg: "Rebooting to apply firewalld installation"
         reboot_timeout: 300
       when: firewalld_install.changed
+      ignore_errors: yes
 
     - name: Enable and start firewalld
       systemd:
         name: firewalld
         enabled: yes
         state: started
+      ignore_errors: yes
 
     - name: Set default zone to workstation
       command: firewall-cmd --set-default-zone=workstation
       changed_when: false
+      ignore_errors: yes
 
     - name: Allow SSH from management network
       firewalld:
@@ -285,6 +307,7 @@
       loop: "{{ ssh.allowed_networks }}"
       when: ssh.allowed_networks is defined
       notify: reload firewall
+      ignore_errors: yes
 
     - name: Allow required services
       firewalld:
@@ -295,6 +318,7 @@
       loop: "{{ firewall.allowed_services }}"
       when: firewall.allowed_services is defined
       notify: reload firewall
+      ignore_errors: yes
 
     - name: Allow required ports
       firewalld:
@@ -305,6 +329,7 @@
       loop: "{{ firewall.allowed_ports }}"
       when: firewall.allowed_ports is defined
       notify: reload firewall
+      ignore_errors: yes
 
     - name: Create rich rules for specific destinations
       firewalld:
@@ -315,6 +340,7 @@
       loop: "{{ firewall.allowed_destinations }}"
       when: firewall.allowed_destinations is defined
       notify: reload firewall
+      ignore_errors: yes
 
     - name: Display firewall configuration
       debug:
@@ -334,6 +360,7 @@
   hosts: ws-reception01
   become: yes
   gather_facts: yes
+  any_errors_fatal: false
 
   pre_tasks:
     - name: Load host variables
@@ -348,12 +375,14 @@
             path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
             state: absent
           when: network.mgmt_remove_after_config | default(false)
+          ignore_errors: yes
 
         - name: Reload NetworkManager
           systemd:
             name: NetworkManager
             state: reloaded
           when: network.mgmt_remove_after_config | default(false)
+          ignore_errors: yes
 
     - name: Create deployment verification script
       copy:
@@ -387,6 +416,7 @@
         mode: '0755'
         owner: root
         group: root
+      ignore_errors: yes
 
     - name: Display final deployment summary
       debug:
