@@ -32,7 +32,7 @@ network:
 # OS Configuration
 os_type: fedora_silverblue  # Immutable OS variant
 os_version: "41"
-template_id: 9300  # Fedora Silverblue 41 template (to be created)
+template_id: 9350  # Fedora Silverblue 41 template (to be created)
 
 # Workstation Profile
 workstation_type: receptionist
