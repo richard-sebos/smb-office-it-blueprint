@@ -84,7 +84,7 @@
           - "========================================="
 
 - name: Configure ws-reception01 - Silverblue Security Features
-  hosts: ws-reception01
+  hosts: bu-reception01
   become: yes
   gather_facts: yes
 
