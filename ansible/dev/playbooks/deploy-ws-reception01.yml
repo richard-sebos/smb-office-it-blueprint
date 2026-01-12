@@ -1,0 +1,61 @@
+---
+################################################################################
+# Playbook: Deploy ws-reception01 VM on Proxmox
+# Purpose: Clone and create the VM only (no configuration)
+# Usage: ansible-playbook playbooks/deploy-ws-reception01.yml
+################################################################################
+
+- name: Deploy ws-reception01 VM on Proxmox
+  hosts: pve
+  gather_facts: no
+  any_errors_fatal: false
+
+  vars:
+    target_host: ws-reception01
+
+  tasks:
+    - name: Load host variables for target VM
+      include_vars:
+        file: ../host_vars/{{ target_host }}.yml
+
+    - name: Display deployment plan
+      debug:
+        msg:
+          - "========================================="
+          - "VM DEPLOYMENT PLAN"
+          - "========================================="
+          - "Hostname: {{ hostname }}"
+          - "VMID: {{ vmid }}"
+          - "IP Address: {{ network.ip_address }}/{{ network.netmask }}"
+          - "VLAN: {{ network.vlan }}"
+          - "Template: {{ template_id }}"
+          - "OS: {{ os_type }} {{ os_version }}"
+          - "Resources: {{ resources.cores }} cores, {{ resources.memory }}MB RAM, {{ resources.disk_size }}"
+          - "========================================="
+
+    - name: Include proxmox_vm_deploy role
+      include_role:
+        name: proxmox_vm_deploy
+      ignore_errors: yes
+
+    - name: Display VM deployment status
+      debug:
+        msg:
+          - "========================================="
+          - "VM DEPLOYMENT COMPLETE"
+          - "========================================="
+          - "VM: {{ hostname }}"
+          - "VMID: {{ vmid }}"
+          - "IP: {{ network.ip_address }}"
+          - "Management IP: {{ network.mgmt_ip }}"
+          - "VLAN: {{ network.vlan }}"
+          - "========================================="
+          - ""
+          - "NEXT STEPS:"
+          - "1. Wait 60 seconds for VM to boot"
+          - "2. Run configuration playbook:"
+          - "   ansible-playbook playbooks/configure-ws-reception01.yml"
+          - ""
+          - "Or start the VM and configure in one command:"
+          - "   ansible-playbook playbooks/deploy-ws-reception01.yml && sleep 60 && ansible-playbook playbooks/configure-ws-reception01.yml"
+          - "========================================="
