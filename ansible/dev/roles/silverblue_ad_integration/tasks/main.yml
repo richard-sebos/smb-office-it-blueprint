@@ -58,17 +58,8 @@
     group: root
     mode: '0755'
 
-- name: Enable automatic home directory creation
-  lineinfile:
-    path: /etc/pam.d/common-session
-    line: "session optional pam_mkhomedir.so skel=/etc/skel umask=0077"
-    insertafter: "session.*pam_unix.so"
-    create: yes
-  when: ansible_os_family == "Debian"
-
-- name: Enable automatic home directory creation (RHEL/Fedora)
+- name: Enable automatic home directory creation (Fedora Silverblue)
   command: authselect enable-feature with-mkhomedir
-  when: ansible_os_family == "RedHat"
   ignore_errors: yes
 
 - name: Enable and start SSSD service
@@ -111,7 +102,7 @@
 
 - name: Configure PAM to use SSSD for authentication
   command: authselect select sssd with-mkhomedir --force
-  when: ansible_os_family == "RedHat"
+  ignore_errors: yes
 
 - name: Verify SSSD is working
   command: "id {{ test_ad_user }}@{{ ad_integration.domain }}"
