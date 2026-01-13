@@ -1,0 +1,14 @@
+---
+################################################################################
+# Role: silverblue_desktop_environment
+# Purpose: Configure GNOME desktop environment for workstation
+################################################################################
+
+# Session security defaults
+default_idle_timeout_minutes: 15
+default_screen_lock_enabled: true
+default_lock_on_suspend: true
+
+# Desktop environment defaults
+default_de_type: gnome
+default_browser: firefox

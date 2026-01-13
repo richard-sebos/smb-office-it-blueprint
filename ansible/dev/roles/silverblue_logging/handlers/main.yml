@@ -1,0 +1,16 @@
+---
+################################################################################
+# Handlers for silverblue_logging role
+################################################################################
+
+- name: restart rsyslog
+  systemd:
+    name: rsyslog
+    state: restarted
+  ignore_errors: yes
+
+- name: restart auditd
+  systemd:
+    name: auditd
+    state: restarted
+  ignore_errors: yes

@@ -1,0 +1,47 @@
+---
+################################################################################
+# Role: silverblue_finalize
+# Tasks: Remove management interface, create verification script
+################################################################################
+
+- name: Display finalization tasks
+  debug:
+    msg:
+      - "Finalizing configuration for {{ hostname }}"
+      - "Removing management interface: {{ network.mgmt_remove_after_config | default(false) }}"
+      - "Creating verification script: {{ create_verification_script }}"
+
+- name: Remove temporary management interface
+  block:
+    - name: Delete management interface connection
+      file:
+        path: "/etc/NetworkManager/system-connections/{{ network.mgmt_interface }}.nmconnection"
+        state: absent
+      when: network.mgmt_remove_after_config | default(false)
+      ignore_errors: yes
+
+    - name: Reload NetworkManager
+      systemd:
+        name: NetworkManager
+        state: reloaded
+      when: network.mgmt_remove_after_config | default(false)
+      ignore_errors: yes
+  when: network.mgmt_interface is defined
+
+- name: Create verification script
+  template:
+    src: verify-workstation.sh.j2
+    dest: "{{ verification_script_path }}"
+    owner: root
+    group: root
+    mode: '0755'
+  when: create_verification_script
+  ignore_errors: yes
+
+- name: Display finalization summary
+  debug:
+    msg:
+      - "Finalization complete:"
+      - "  • Management interface: {{ 'removed' if (network.mgmt_remove_after_config | default(false)) else 'kept' }}"
+      - "  • Verification script: {{ verification_script_path }}"
+      - "  • Connect via: ssh ansible-admin@{{ network.ip_address }}"

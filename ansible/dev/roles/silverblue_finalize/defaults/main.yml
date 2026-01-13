@@ -1,0 +1,12 @@
+---
+################################################################################
+# Role: silverblue_finalize
+# Purpose: Finalization tasks - cleanup and verification script
+################################################################################
+
+# Management interface cleanup
+remove_mgmt_interface: true
+
+# Verification script
+create_verification_script: true
+verification_script_path: /usr/local/bin/verify-workstation.sh

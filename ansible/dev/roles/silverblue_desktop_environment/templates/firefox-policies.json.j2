@@ -1,0 +1,17 @@
+{
+  "policies": {
+    "DisplayBookmarksToolbar": true,
+    "Bookmarks": [
+{% for bookmark in desktop_environment.browser_bookmarks %}
+      {
+        "Title": "{{ bookmark.name }}",
+        "URL": "{{ bookmark.url }}"
+      }{{ "," if not loop.last else "" }}
+{% endfor %}
+    ],
+    "Homepage": {
+      "URL": "{{ desktop_environment.browser_bookmarks[0].url }}",
+      "Locked": false
+    }
+  }
+}

@@ -1,0 +1,67 @@
+---
+################################################################################
+# Role: silverblue_desktop_environment
+# Tasks: Configure GNOME desktop settings, idle timeout, browser bookmarks
+################################################################################
+
+- name: Display desktop environment configuration
+  debug:
+    msg:
+      - "Configuring desktop environment for {{ hostname }}"
+      - "Type: {{ desktop_environment.de_type | default(default_de_type) }}"
+      - "Idle timeout: {{ session_security.idle_timeout_minutes | default(default_idle_timeout_minutes) }} minutes"
+
+- name: Configure GNOME idle timeout
+  command: |
+    gsettings set org.gnome.desktop.session idle-delay {{ session_security.idle_timeout_minutes * 60 }}
+  become: no
+  become_user: "{{ item }}"
+  loop:
+    - gdm
+  when: session_security.idle_timeout_minutes is defined
+  ignore_errors: yes
+
+- name: Configure GNOME screen lock
+  command: |
+    gsettings set org.gnome.desktop.screensaver lock-enabled true
+  become: no
+  become_user: gdm
+  when: session_security.screen_lock_enabled | default(default_screen_lock_enabled)
+  ignore_errors: yes
+
+- name: Configure GNOME to lock on suspend
+  command: |
+    gsettings set org.gnome.desktop.screensaver lock-delay 0
+  become: no
+  become_user: gdm
+  when: session_security.lock_on_suspend | default(default_lock_on_suspend)
+  ignore_errors: yes
+
+- name: Create Firefox policies directory
+  file:
+    path: /etc/firefox/policies
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: desktop_environment.browser_bookmarks is defined
+  ignore_errors: yes
+
+- name: Create browser bookmarks configuration
+  template:
+    src: firefox-policies.json.j2
+    dest: /etc/firefox/policies/policies.json
+    owner: root
+    group: root
+    mode: '0644'
+  when: desktop_environment.browser_bookmarks is defined
+  ignore_errors: yes
+
+- name: Display desktop configuration summary
+  debug:
+    msg:
+      - "Desktop environment configured:"
+      - "  • Idle timeout: {{ session_security.idle_timeout_minutes | default(default_idle_timeout_minutes) }} minutes"
+      - "  • Screen lock: {{ 'enabled' if (session_security.screen_lock_enabled | default(default_screen_lock_enabled)) else 'disabled' }}"
+      - "  • Lock on suspend: {{ 'enabled' if (session_security.lock_on_suspend | default(default_lock_on_suspend)) else 'disabled' }}"
+      - "  • Browser bookmarks: {{ desktop_environment.browser_bookmarks | length if desktop_environment.browser_bookmarks is defined else 0 }} configured"

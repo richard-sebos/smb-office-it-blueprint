@@ -1,0 +1,13 @@
+---
+################################################################################
+# Role: silverblue_logging
+# Purpose: Configure rsyslog and auditd for centralized logging
+################################################################################
+
+# Rsyslog defaults
+default_rsyslog_enabled: true
+default_rsyslog_protocol: tcp
+default_rsyslog_port: 514
+
+# Auditd defaults
+default_auditd_enabled: true

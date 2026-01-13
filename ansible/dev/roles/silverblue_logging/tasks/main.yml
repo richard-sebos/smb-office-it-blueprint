@@ -1,0 +1,69 @@
+---
+################################################################################
+# Role: silverblue_logging
+# Tasks: Configure rsyslog for remote logging and auditd for security auditing
+################################################################################
+
+- name: Display logging configuration
+  debug:
+    msg:
+      - "Configuring logging for {{ hostname }}"
+      - "Remote syslog: {{ logging.rsyslog.target if logging.rsyslog is defined else 'not configured' }}"
+      - "Auditd: {{ 'enabled' if (logging.auditd.enabled | default(default_auditd_enabled)) else 'disabled' }}"
+
+- name: Configure rsyslog for remote logging
+  template:
+    src: rsyslog-remote.conf.j2
+    dest: /etc/rsyslog.d/50-remote.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: logging.rsyslog is defined
+  notify: restart rsyslog
+  ignore_errors: yes
+
+- name: Enable and start rsyslog
+  systemd:
+    name: rsyslog
+    enabled: yes
+    state: started
+  when: logging.rsyslog.enabled | default(default_rsyslog_enabled)
+  ignore_errors: yes
+
+- name: Create audit rules directory
+  file:
+    path: /etc/audit/rules.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: logging.auditd is defined
+  ignore_errors: yes
+
+- name: Configure auditd rules
+  template:
+    src: auditd-workstation.rules.j2
+    dest: /etc/audit/rules.d/workstation.rules
+    owner: root
+    group: root
+    mode: '0640'
+  when: logging.auditd.enabled | default(default_auditd_enabled)
+  notify: restart auditd
+  ignore_errors: yes
+
+- name: Enable and start auditd
+  systemd:
+    name: auditd
+    enabled: yes
+    state: started
+  when: logging.auditd.enabled | default(default_auditd_enabled)
+  ignore_errors: yes
+
+- name: Display logging configuration summary
+  debug:
+    msg:
+      - "Logging configured:"
+      - "  • Remote syslog: {{ logging.rsyslog.target }}:{{ logging.rsyslog.port }} ({{ logging.rsyslog.protocol | upper }})"
+      - "  • Auditd: {{ 'enabled' if (logging.auditd.enabled | default(default_auditd_enabled)) else 'disabled' }}"
+      - "  • Log all auth: {{ logging.rsyslog.log_all_auth | default(false) }}"
+  when: logging.rsyslog is defined

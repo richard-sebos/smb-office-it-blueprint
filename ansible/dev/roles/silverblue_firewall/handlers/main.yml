@@ -1,0 +1,8 @@
+---
+################################################################################
+# Handlers for silverblue_firewall role
+################################################################################
+
+- name: reload firewall
+  command: firewall-cmd --reload
+  ignore_errors: yes

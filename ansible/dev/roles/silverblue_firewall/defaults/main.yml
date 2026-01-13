@@ -1,0 +1,14 @@
+---
+################################################################################
+# Role: silverblue_firewall
+# Purpose: Configure firewalld for workstation security
+################################################################################
+
+# Firewall defaults
+default_firewall_enabled: true
+default_firewall_zone: workstation
+
+# Default allowed services (minimal)
+default_allowed_services:
+  - ssh
+  - dhcpv6-client
