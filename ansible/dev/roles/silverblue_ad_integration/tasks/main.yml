@@ -9,28 +9,49 @@
     msg: "This role is designed for Fedora Silverblue (OSTree-based systems)"
   when: ansible_distribution != "Fedora" or ansible_pkg_mgr != "atomic_container"
 
+- name: Check currently layered packages
+  command: rpm-ostree status --json
+  register: ostree_status_json
+  changed_when: false
+  failed_when: false
+
+- name: Parse layered packages
+  set_fact:
+    layered_packages: "{{ (ostree_status_json.stdout | from_json).deployments[0].packages | default([]) }}"
+  when: ostree_status_json.rc == 0
+
+- name: Determine packages that need to be installed
+  set_fact:
+    packages_to_install: "{{ ad_required_packages | difference(layered_packages | default([])) }}"
+
+- name: Display packages to be installed
+  debug:
+    msg: "Packages to install: {{ packages_to_install | join(', ') if packages_to_install | length > 0 else 'none (all already installed)' }}"
+
 - name: Layer required AD packages onto OSTree
-  command: rpm-ostree install {{ ad_required_packages | join(' ') }}
+  command: rpm-ostree install {{ packages_to_install | join(' ') }}
   register: ostree_layer
   changed_when: "'Installing' in ostree_layer.stdout"
+  when: packages_to_install | length > 0
   notify: reboot workstation
-
-- name: Check if reboot is needed for OSTree layering
-  stat:
-    path: /run/ostree-booted
-  register: ostree_status
 
 - name: Reboot if packages were layered
   reboot:
     msg: "Rebooting to apply rpm-ostree package layering"
     reboot_timeout: 300
-  when: ostree_layer.changed
+  when:
+    - ostree_layer is defined
+    - ostree_layer.changed
+  ignore_errors: yes
 
 - name: Wait for system to come back online
   wait_for_connection:
     delay: 10
     timeout: 300
-  when: ostree_layer.changed
+  when:
+    - ostree_layer is defined
+    - ostree_layer.changed
+  ignore_errors: yes
 
 - name: Create Kerberos configuration
   template:
