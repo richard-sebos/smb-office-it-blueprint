@@ -9,24 +9,29 @@
     msg: "This role is designed for Fedora Silverblue (OSTree-based systems)"
   when: ansible_distribution != "Fedora" or ansible_pkg_mgr != "atomic_container"
 
-- name: Check currently layered packages
-  command: rpm-ostree status --json
-  register: ostree_status_json
+- name: Check which packages are already installed (base + layered)
+  shell: |
+    for pkg in {{ ad_required_packages | join(' ') }}; do
+      if rpm -q "$pkg" &>/dev/null; then
+        echo "$pkg:installed"
+      else
+        echo "$pkg:missing"
+      fi
+    done
+  register: package_check
   changed_when: false
   failed_when: false
 
-- name: Parse layered packages
+- name: Parse package check results
   set_fact:
-    layered_packages: "{{ (ostree_status_json.stdout | from_json).deployments[0].packages | default([]) }}"
-  when: ostree_status_json.rc == 0
+    packages_to_install: "{{ package_check.stdout_lines | select('search', ':missing$') | map('regex_replace', ':missing$', '') | list }}"
+    packages_already_installed: "{{ package_check.stdout_lines | select('search', ':installed$') | map('regex_replace', ':installed$', '') | list }}"
 
-- name: Determine packages that need to be installed
-  set_fact:
-    packages_to_install: "{{ ad_required_packages | difference(layered_packages | default([])) }}"
-
-- name: Display packages to be installed
+- name: Display package installation status
   debug:
-    msg: "Packages to install: {{ packages_to_install | join(', ') if packages_to_install | length > 0 else 'none (all already installed)' }}"
+    msg:
+      - "Already installed: {{ packages_already_installed | join(', ') if packages_already_installed | length > 0 else 'none' }}"
+      - "Need to install: {{ packages_to_install | join(', ') if packages_to_install | length > 0 else 'none' }}"
 
 - name: Layer required AD packages onto OSTree
   command: rpm-ostree install {{ packages_to_install | join(' ') }}
