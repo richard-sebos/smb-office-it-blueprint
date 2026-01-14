@@ -8,7 +8,7 @@
 # VM Identity
 vmid: 310
 hostname: ansible-ctrl
-fqdn: ansible-ctrl.corp.company.local
+fqdn: ansible-ctrl.corp.sebostech.local
 
 # Network Configuration
 network:
@@ -21,7 +21,7 @@ network:
     - 8.8.8.8
     - 192.168.35.210  # dc01
     - 192.168.35.211  # dc02
-  search_domain: corp.company.local
+  search_domain: corp.sebostech.local
 
   # Temporary management interface for initial configuration
   mgmt_interface: ens19
