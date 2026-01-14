@@ -13,21 +13,21 @@ fqdn: ansible-ctrl.corp.company.local
 # Network Configuration
 network:
   interface: ens18
-  ip_address: 10.0.120.50
+  ip_address: 192.168.35.220  # Simplified subnet for testing
   netmask: 24
-  gateway: 10.0.120.1
-  vlan: 120
+  gateway: 192.168.35.1
+  vlan: 1  # Default VLAN for now
   dns_servers:
     - 8.8.8.8
-    - 10.0.120.10  # dc01
-    - 10.0.120.11  # dc02
+    - 192.168.35.210  # dc01
+    - 192.168.35.211  # dc02
   search_domain: corp.company.local
 
   # Temporary management interface for initial configuration
   mgmt_interface: ens19
-  mgmt_ip: 192.168.35.125  # On same subnet as Ansible server
+  mgmt_ip: 192.168.35.221  # Management IP
   mgmt_user: ansible-admin  # User account for initial connection
-  mgmt_remove_after_config: true  # Remove this interface after configuration is complete
+  mgmt_remove_after_config: false  # Keep for testing
 
 # OS Configuration
 os_type: rocky  # ubuntu or rocky

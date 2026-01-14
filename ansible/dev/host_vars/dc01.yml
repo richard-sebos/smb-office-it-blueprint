@@ -13,13 +13,13 @@ fqdn: dc01.corp.company.local
 # Network Configuration
 network:
   interface: ens18
-  ip_address: 10.0.120.10
+  ip_address: 192.168.35.210  # Simplified subnet for testing
   netmask: 24
-  gateway: 10.0.120.1
-  vlan: 120
+  gateway: 192.168.35.1
+  vlan: 1  # Default VLAN for now
   dns_servers:
     - 127.0.0.1  # Self (primary DC)
-    - 10.0.120.11  # dc02 (secondary)
+    - 192.168.35.211  # dc02 (secondary)
     - 8.8.8.8  # Fallback
   search_domain: corp.company.local
 
