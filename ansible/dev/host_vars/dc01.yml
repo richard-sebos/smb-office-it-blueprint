@@ -8,7 +8,7 @@
 # VM Identity
 vmid: 110
 hostname: dc01
-fqdn: dc01.sebostech.local
+fqdn: dc01.corp.sebostech.local
 
 # Network Configuration
 network:
@@ -21,8 +21,8 @@ network:
     - 127.0.0.1  # Self (primary DC)
     - 192.168.35.211  # dc02 (secondary)
     - 8.8.8.8  # Fallback
-  search_domain: sebostech.local
-
+  search_domain: corp.sebostech.local
+  
 # OS Configuration
 os_type: ubuntu  # ubuntu or rocky
 os_version: "22.04"
